@@ -5,8 +5,10 @@
 #include <getopt.h>
 #include <sysexits.h>
 #include <limits.h>
+#include <string.h>
 #include "TLE.h"
 #include "opt_util.h"
+#include "tle_loader.h"
 
 #define WGS84_A (6378.137) /* In km */
 #define WGS84_E_SQUARED (6.69437999014E-3)
@@ -70,18 +72,22 @@ static void usage(void) {
     printf("Usage: %s [OPTION...] <TLE-FILE>\n", executable);
     printf("\n");
     printf("Options are:\n");
-    printf("-h,--help                : show this help and exit.\n");
-    printf("-l,--location=<LON,LAT>  : specify the location on the ground, in degrees.\n");
-    printf("                           The default is 0,0.\n");
-    printf("-s,--start=<TIMESTAMP>   : specify the date and time at which to start the,\n");
-    printf("                           calculation, formatted as yyyy-mm-ddThh-mm-ssZ.\n");
-    printf("                           The default is the current date and time.\n");
-    printf("-c,--count=<COUNT>       : specify the number of calculations to perform.\n");
-    printf("                           The default is 1.\n");
-    printf("-i,--interval=<INTERVAL> : specify the interval between consecutive\n");
-    printf("                           calculations in seconds. The default is 1.\n");
+    printf("-h,--help                  : show this help and exit.\n");
+    printf("-l,--location=<LON,LAT>    : specify the location on the ground, in degrees.\n");
+    printf("                             The default is 0,0.\n");
+    printf("-s,--start=<TIMESTAMP>     : specify the date and time at which to start the,\n");
+    printf("                             calculation, formatted as yyyy-mm-ddThh-mm-ssZ.\n");
+    printf("                             The default is the current date and time.\n");
+    printf("-c,--count=<COUNT>         : specify the number of calculations to perform.\n");
+    printf("                             The default is 1.\n");
+    printf("-i,--interval=<INTERVAL>   : specify the interval between consecutive\n");
+    printf("                             calculations in seconds. The default is 1.\n");
+    printf("-n,--satellite-name=<NAME> : in case the TLE file contains data of multiple\n");
+    printf("                             satellites, specify the name of the satellite to\n");
+    printf("                             be used. The default is to use the first satellite\n");
+    printf("                             from the file.\n");
     printf("\n");
-    printf("<TLE-FILE> is the path to the TLE file\n");
+    printf("<TLE-FILE> is the path to the TLE file. Use - to read from stdin\n");
     printf("\n");
     printf("The output consists of space-separated values, one for each calculation.\n");
     printf("The values are: datetime, range in km, elevation in degrees\n");
@@ -102,6 +108,7 @@ int main(int argc, char *argv[]) {
         { "start", required_argument, NULL, 's' },
         { "count", required_argument, NULL, 'c' },
         { "interval", required_argument, NULL, 'i' },
+        { "satellite-name", required_argument, NULL, 'n' },
         { NULL }
     };
 
@@ -111,9 +118,10 @@ int main(int argc, char *argv[]) {
     start.tv_usec = 0;
     int count = 1;
     int interval = 1;
+    char *satellite_name = NULL;
     
 
-    while((c = getopt_long(argc, argv, "hl:s:c:i:", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hl:s:c:i:n:", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -135,22 +143,34 @@ int main(int argc, char *argv[]) {
                 if(optarg_as_int(&interval, 1, INT_MAX))
                     usage_error("Invalid interval");
                 break;
+            case 'n':
+                free(satellite_name);
+                satellite_name = strdup(optarg);
+                break;
             default:
                 usage_error("Invalid option");
                 break;
         }
     }
-    
-    char *line1 = "1 47948U 21022S   22090.48111467  .00015285  00000-0  98653-3 0  9999";
-    char *line2 = "2 47948  97.5429 352.2830 0021432  51.8136 308.5019 15.08167890 56157";
 
-    TLE tle;
-    parseLines(&tle, line1, line2);
+    if(optind != argc-1) 
+        usage_error("Missing filename");
+
+    loaded_tle *lt = load_tles_from_filename(argv[argc-1]);
+    if(!lt) usage_error("Failed to read file");
+
+    loaded_tle *target_tle = get_tle_by_name(lt, satellite_name);
+    if(!target_tle) {
+        unload_tles(lt);
+        usage_error("Satellite not found");
+    }
+
+    TLE *tle = &target_tle->tle;
 
     for(size_t l=0; l<count; l++) {
 
         double r[3], v[3];
-        getRVForDate(&tle, start.tv_sec * 1000, r, v);
+        getRVForDate(tle, start.tv_sec * 1000, r, v);
 
         double alt = 0;
         double ecef[3];
@@ -178,31 +198,10 @@ int main(int argc, char *argv[]) {
         double psi0 = M_PI - M_PI/2 - phi;
         double psi = M_PI - psi0;
         double elevation = M_PI - a-psi;
-        //if(dotp2 >= 0) elevation = M_PI/2 - a;
-        //else elevation = a-M_PI/2;
         printf("%04d-%02d-%02dT%02d:%02d:%02dZ %g %g\n", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday, fmt.tm_hour, fmt.tm_min, fmt.tm_sec, range, rad_to_deg(elevation));
-#if 0
-
-        double dotp = dot_product(eci ,r);
-        
-
-        double cos_phi = dotp / (vec3_len(r) * vec3_len(eci));
-        double phi = acos(cos_phi);
-        printf("phi=%g, sin(phi)=%g\n", rad_to_deg(phi), sin(phi));
-        printf("vec3_len(r)=%g\n", vec3_len(r));
-        printf("vec3_len(r)/range=%g\n", vec3_len(r)/range);
-        printf("sin(phie) * vec3_len(r)/range=%g\n", sin(phi) * vec3_len(r)/range);
-        double sin_alpha = sin(phi) * vec3_len(r)/range;
-        double alpha = M_PI - asin(sin_alpha);// - M_PI/2.0;
-        if(dotp < 0) alpha = -alpha;
-
-        double elevation = 
-
-        struct tm fmt;
-        gmtime_r(&start.tv_sec, &fmt);
-        printf("%04d-%02d-%02dT%02d:%02d:%02d range=%g phi=%g cos(phi)=%g alpha=%g sin(alpha)=%g dotp=%g\n", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday, fmt.tm_hour, fmt.tm_min, fmt.tm_sec, range, rad_to_deg(phi), cos_phi, rad_to_deg(alpha), sin_alpha, dotp);
-#endif
 
         start.tv_sec += interval;
     }
+
+    unload_tles(lt);
 }

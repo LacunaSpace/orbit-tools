@@ -1,6 +1,6 @@
 all: tlegen satobs
 
-util:=src/TLE.o src/SGP4.o src/opt_util.o
+util:=src/TLE.o src/SGP4.o src/opt_util.o src/tle_loader.o
 
 CFLAGS=-Wall
 
