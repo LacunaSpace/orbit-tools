@@ -1,4 +1,4 @@
-all: tlegen satobs
+all: tlegen satobs tleinfo
 
 util:=src/TLE.o src/SGP4.o src/opt_util.o src/tle_loader.o
 
@@ -10,8 +10,11 @@ tlegen: src/tlegen.o $(util)
 satobs: src/satobs.o $(util)
 	gcc -o satobs ${CFLAGS} $^
 
+tleinfo: src/tleinfo.o $(util)
+	gcc -o tleinfo ${CFLAGS} $^
+
 src/%.o: src/%.c
 	gcc -Wall -c $< -o $@
 
 clean:
-	rm -f tlegen satobs src/*.o
+	rm -f tleinfo tlegen satobs src/*.o
