@@ -1,20 +1,31 @@
-all: tlegen satobs tleinfo
+all: bin/tlegen bin/satobs bin/tleinfo bin/termgen
 
-util:=src/TLE.o src/SGP4.o src/opt_util.o src/tle_loader.o
+util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o
 
-CFLAGS=-Wall
+CFLAGS=-Wall -Isrc
 
-tlegen: src/tlegen.o $(util)
-	gcc -o tlegen ${CFLAGS} $^
+bin/tlegen: build/tlegen.o $(util)
+	gcc -o bin/tlegen ${CFLAGS} $^
 
-satobs: src/satobs.o $(util)
-	gcc -o satobs ${CFLAGS} $^
+bin/satobs: build/satobs.o $(util)
+	gcc -o bin/satobs ${CFLAGS} $^
 
-tleinfo: src/tleinfo.o $(util)
-	gcc -o tleinfo ${CFLAGS} $^
+bin/tleinfo: build/tleinfo.o $(util)
+	gcc -o bin/tleinfo ${CFLAGS} $^
 
-src/%.o: src/%.c
-	gcc -Wall -c $< -o $@
+bin/termgen: build/termgen.o build/geo.o $(util)
+	gcc -o bin/termgen ${CFLAGS} $^
+
+build/geo.o: build/geo.c
+	gcc ${CFLAGS} -c $< -o $@
+
+build/%.o: src/%.c
+	gcc ${CFLAGS} -c $< -o $@
+
+build/geo.c: src/worldcities.csv
+	./generate-geo.pl $< > $@
 
 clean:
-	rm -f tleinfo tlegen satobs src/*.o
+	rm -rf build bin
+
+$(shell mkdir -p build bin)

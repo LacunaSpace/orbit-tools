@@ -19,7 +19,7 @@ void usage(void) {
     fprintf(stderr, "-h,--help                 : show this help and exit\n");
     fprintf(stderr, "-n,--satelite-name=<NAME> : the name of the satellite of\n");
     fprintf(stderr, "                            which to show information. The\n");
-    fprintf(stderr, "                            default is top who information about\n");
+    fprintf(stderr, "                            default is to show information about\n");
     fprintf(stderr, "                            all satellites in the file\n");
 }
 
