@@ -133,7 +133,6 @@ int main(int argc, char *argv[]) {
             case 's':
                 if(optarg_as_datetime(&start.tv_sec))
                     usage_error("Invalid start");
-                fprintf(stderr, "Start: %ld\n", start.tv_sec);
                 break;
             case 'c':
                 if(optarg_as_int(&count, 1, INT_MAX))
