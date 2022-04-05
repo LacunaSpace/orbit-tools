@@ -22,8 +22,8 @@ build/geo.o: build/geo.c
 build/%.o: src/%.c
 	gcc ${CFLAGS} -c $< -o $@
 
-build/geo.c: src/worldcities.csv
-	./generate-geo.pl $< > $@
+build/geo.c: src/worldcities.csv src/othercities.csv
+	./generate-geo.pl $^ > $@
 
 clean:
 	rm -rf build bin

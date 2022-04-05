@@ -20,5 +20,5 @@ EOF
 print <<EOF;
 };
 
-size_t nr_cities=$count;
+size_t nr_cities=($count-1);
 EOF
