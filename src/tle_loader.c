@@ -75,3 +75,17 @@ loaded_tle *get_tle_by_name(loaded_tle *lt, char *name) {
     }
     return NULL;
 }
+
+loaded_tle *get_tle_by_index(loaded_tle *lt, size_t index) {
+    for(; index; index--) lt=lt->next;
+    return lt;
+}
+
+int count_tles(loaded_tle *lt) {
+    int count = 0;
+    while(lt) {
+        count++;
+        lt = lt->next;
+    }
+    return count;
+}

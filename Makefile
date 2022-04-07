@@ -1,6 +1,6 @@
-all: bin/tlegen bin/satobs bin/tleinfo bin/termgen
+all: bin/tlegen bin/satobs bin/satpass bin/tleinfo bin/termgen 
 
-util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o
+util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o build/observer.o
 
 CFLAGS=-Wall -Isrc
 
@@ -9,6 +9,9 @@ bin/tlegen: build/tlegen.o $(util)
 
 bin/satobs: build/satobs.o $(util)
 	gcc -o bin/satobs ${CFLAGS} $^
+
+bin/satpass: build/satpass.o $(util)
+	gcc -o bin/satpass ${CFLAGS} $^
 
 bin/tleinfo: build/tleinfo.o $(util)
 	gcc -o bin/tleinfo ${CFLAGS} $^
