@@ -16,17 +16,23 @@ bin/satpass: build/satpass.o $(util)
 bin/tleinfo: build/tleinfo.o $(util)
 	gcc -o bin/tleinfo ${CFLAGS} $^
 
-bin/termgen: build/termgen.o build/geo.o $(util)
+bin/termgen: build/termgen.o build/countries.o build/cities.o $(util)
 	gcc -o bin/termgen ${CFLAGS} $^
 
-build/geo.o: build/geo.c
+build/cities.o: build/cities.c
+	gcc ${CFLAGS} -c $< -o $@
+
+build/countries.o: build/countries.c
 	gcc ${CFLAGS} -c $< -o $@
 
 build/%.o: src/%.c
 	gcc ${CFLAGS} -c $< -o $@
 
-build/geo.c: src/worldcities.csv src/othercities.csv
-	./generate-geo.pl $^ > $@
+build/cities.c: src/worldcities.csv src/othercities.csv
+	./generate-cities.pl $^ > $@
+
+build/countries.c: src/countries.txt
+	./generate-countries.pl $^ > $@
 
 clean:
 	rm -rf build bin
