@@ -32,6 +32,8 @@ static void usage(void) {
     printf("-s,--start=<START>             : Start searching at the specified start-date and\n");
     printf("                                 -time, specified as yyyy-mm-ddThh:mm:ssZ. The\n");
     printf("                                 default is the current date and time\n");
+    printf("-s,--format=rows|cols          : Sets the output format. When not specified, rows\n");
+    printf("                                 is used when count is 1, otherwise cols\n");
 }
 
 static void usage_error(char *msg) {
@@ -44,9 +46,27 @@ typedef struct {
     TLE *tle;
     int in_pass;
     time_t pass_start;
+    time_t tca;
     double best_elevation;
     double best_azimuth;
+    double start_azimuth;
+    double end_azimuth;
 } scanner;
+
+static int starts_with(char *s, char *prefix) {
+    while(*s && *prefix) {
+        if(*s != *prefix) return 0;
+        s++;
+        prefix++;
+    }
+    return !(*prefix);
+}
+
+static void print_timestamp(time_t t) {
+    struct tm f;
+    gmtime_r(&t, &f); 
+    printf("%04d-%02d-%02dT%02d:%02d:%02dZ", f.tm_year + 1900, f.tm_mon+1, f.tm_mday, f.tm_hour, f.tm_min, f.tm_sec);
+}
 
 int main(int argc, char *argv[]) {
     executable = argv[0];
@@ -58,6 +78,7 @@ int main(int argc, char *argv[]) {
         { "min-elevation", required_argument, NULL, 'e' },
         { "count", required_argument, NULL, 'c' },
         { "start", required_argument, NULL, 's' },
+        { "format", required_argument, NULL, 'f' },
         { NULL }
     };
 
@@ -74,7 +95,13 @@ int main(int argc, char *argv[]) {
     char *sat_name = NULL;
     int min_elevation = 0;
 
-    while((c = getopt_long(argc, argv, "hl:n:e:c:s:", longopts, NULL)) != -1) {
+    enum {
+        fmt_auto,
+        fmt_cols,
+        fmt_rows
+    } fmt = fmt_auto;
+
+    while((c = getopt_long(argc, argv, "hl:n:e:c:s:f:", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -98,6 +125,11 @@ int main(int argc, char *argv[]) {
             case 's':
                 if(optarg_as_datetime(&start.tv_sec))
                     usage_error("Invalid start");
+                break;
+            case 'f':
+                if(starts_with("rows", optarg)) fmt = fmt_rows;
+                else if(starts_with("cols", optarg)) fmt = fmt_cols;
+                else usage_error("Invalid format");
                 break;
             default:
                 usage_error("invalid option");
@@ -133,7 +165,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    while(count) {
+    if(fmt == fmt_auto) fmt = count > 1 ? fmt_cols : fmt_rows;
+
+    size_t pass_count = 0;
+    while(pass_count < count) {
         observation result;
         for(size_t l=0; l<nr_sats; l++) {
             observe(&obs, &result, scanners[l].tle, start.tv_sec);
@@ -142,19 +177,32 @@ int main(int argc, char *argv[]) {
                 scanners[l].in_pass = 1;
                 scanners[l].best_elevation = result.elevation;
                 scanners[l].best_azimuth = result.azimuth;
+                scanners[l].tca = start.tv_sec;
+                scanners[l].start_azimuth = result.azimuth;
             } else if(result.elevation < min_elevation && scanners[l].in_pass) {
                 scanners[l].in_pass = 0;
-                struct tm begin_f, end_f;
                 time_t begin = scanners[l].pass_start, end = start.tv_sec-1;
-                gmtime_r(&begin, &begin_f);
-                gmtime_r(&end, &end_f);
-                printf("%04d-%02d-%02dT%02d:%02d:%02dZ ", begin_f.tm_year + 1900, begin_f.tm_mon+1, begin_f.tm_mday, begin_f.tm_hour, begin_f.tm_min, begin_f.tm_sec);
-                printf("%04d-%02d-%02dT%02d:%02d:%02dZ ", end_f.tm_year + 1900, end_f.tm_mon+1, end_f.tm_mday, end_f.tm_hour, end_f.tm_min, end_f.tm_sec);
-                printf("%s %g %g\n", scanners[l].name, scanners[l].best_elevation, scanners[l].best_azimuth);
-                count--;
+                if(fmt == fmt_cols) {
+                    print_timestamp(begin); printf(" ");
+                    print_timestamp(end); printf(" ");
+                    printf("%s %g %g\n", scanners[l].name, scanners[l].best_elevation, scanners[l].best_azimuth);
+                } else {
+                    if(pass_count) printf("------------------------------------------------\n");
+                    printf("AOS         : "); print_timestamp(begin); printf("\n");
+                    printf("TCA         : "); print_timestamp(scanners[l].tca); printf("\n");
+                    printf("LOS         : "); print_timestamp(end); printf("\n");
+                    printf("Duration    : %lds\n", start.tv_sec - scanners[l].pass_start);
+                    printf("Elevation   : %g\n", scanners[l].best_elevation);
+                    printf("AOS azimuth : %g\n", scanners[l].start_azimuth);
+                    printf("TCA azimuth : %g\n", scanners[l].best_azimuth);
+                    printf("LOS azimuth : %g\n", result.azimuth);
+                    printf("Satellite   : %s\n", scanners[l].name);
+                }
+                pass_count++;
             } else if(scanners[l].in_pass && result.elevation > scanners[l].best_elevation) {
                 scanners[l].best_elevation = result.elevation;
                 scanners[l].best_azimuth = result.azimuth;
+                scanners[l].tca = start.tv_sec;
             }
         }
         start.tv_sec++;
