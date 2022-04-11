@@ -53,37 +53,105 @@ static double vec3_len(double vec[3]) {
     return sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
 }
 
+static void vec3_scalar_mult(double original[3], double scalar, double result[3]) {
+    for(size_t l=0; l<3; l++)
+        result[l] = original[l] * scalar;
+}
+
+static void vec3_norm(double original[3], double result[3]) {
+    double len = vec3_len(original);
+    vec3_scalar_mult(original, 1.0/len, result);
+}
+
 static double dot_product(double a[3], double b[3]) {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
+static void cross_product(double a[3], double b[3], double result[3]) {
+    result[0] = a[1]*b[2] - a[2]*b[1];
+    result[1] = a[2]*b[0] - a[0]*b[2];
+    result[2] = a[0]*b[1] - a[1]*b[0];
+}
+
 void observe(observer *obs, observation *o, TLE *tle, time_t when) {
-    double r[3], v[3];
-    getRVForDate(tle, when * 1000, r, v);
+    /* Get the location of the satellite in ECI. This also gives us the satellite's 
+       velocity, which we don't use for now */
+    double sat_eci[3], v[3];
+    getRVForDate(tle, when * 1000, sat_eci, v);
 
-    double ecef[3];
-    lla_to_ecef(obs->lon, obs->lat, obs->alt, ecef);
-    double eci[3];
-    ecef_to_eci(ecef, (double)when, eci);
+    /* We have the observer's location in lon/lat/alt, convert this first
+       to ECEF then to ECI */
+    double obs_ecef[3];
+    lla_to_ecef(obs->lon, obs->lat, obs->alt, obs_ecef);
+    double obs_eci[3];
+    ecef_to_eci(obs_ecef, (double)when, obs_eci);
 
+    /* Calculate dir, the vector pointing from the observer to the satellite, and
+       its length, range */
     double dir[3] = {
-        r[0] - eci[0], r[1] - eci[1], r[2] - eci[2]
+        sat_eci[0] - obs_eci[0], sat_eci[1] - obs_eci[1], sat_eci[2] - obs_eci[2]
     };
     double range = vec3_len(dir);
 
-    double robs = vec3_len(eci);
-    double rsat = vec3_len(r);
+    /* Also calculate the lengths of the obs_eci and sat_eci vectors, so we
+       have the lengths of all three sides of a triangle (see calc1.png) */
+    double robs = vec3_len(obs_eci);
+    double rsat = vec3_len(sat_eci);
 
+    /* Use the cosine rule to calculate alpha (see calc1.png) */
     double cosa = (robs*robs - rsat*rsat - range*range) / (-2.0 * rsat * range);
     double a = acos(cosa);
 
-    double dotp = dot_product(eci ,r);
-    double cos_phi = dotp / (vec3_len(r) * vec3_len(eci));
+    /* Use the dot-product of sat_eci and obs_eci to calculate phi (see calc1.png) */
+    double dotp = dot_product(obs_eci, sat_eci);
+    double cos_phi = dotp / (vec3_len(sat_eci) * vec3_len(obs_eci));
     double phi = acos(cos_phi);
-    double psi0 = M_PI - M_PI/2 - phi;
-    double psi = M_PI - psi0;
-    double elevation = M_PI - a-psi;
+
+    /* Now we have two angles of the triangle - the third angle is the elevation + 90 degrees */
+    double elevation = M_PI - a - phi - M_PI/2.0;
 
     o->range = range;
     o->elevation = rad_to_deg(elevation);
+
+    /* Next order of business is to calculate the azimuth. To do this we first
+       decompose the dir vector in a component along obs_eci and a component perpendicular
+       to that. The perpendicular component will be in the plane tangent to 
+       the earth surface and touching the earth at the observer's location. */
+    double obs_eci_norm[3], dir_norm[3];
+    vec3_norm(obs_eci, obs_eci_norm);
+    vec3_norm(dir, dir_norm);
+    double dir_parallel[3], dir_parallel_norm[3]; /* This will the component of dir parallel to obs_eci */
+    vec3_scalar_mult(obs_eci_norm, dot_product(dir, obs_eci_norm), dir_parallel);
+    vec3_norm(dir_parallel, dir_parallel_norm);
+    /* The perpendicular component is simply the difference between dir and dir_parallel */
+    double dir_perp[3] = { dir[0] - dir_parallel[0], dir[1] - dir_parallel[1], dir[2] - dir_parallel[2] };
+    double dir_perp_norm[3];
+    vec3_norm(dir_perp, dir_perp_norm);
+
+    /* To complete the azimuth calculation we need a vector in the same tangential plane, but
+       pointing north. The angle between the two vectors will be the azimuth. To calculate this
+       vector, we first compute a vector pointing east from the observer. This vector is 
+       perpendicular to both obs_eci and to the earth rotational axis, so we can get it
+       using the cross product */
+    double down[3], rot_axis[3] = { 0, 0, 1.0 }, east[3];
+    vec3_scalar_mult(obs_eci_norm, -1.0, down);
+    cross_product(down, rot_axis, east);
+    double east_norm[3];
+    vec3_norm(east, east_norm);
+    /* Now the vector pointing north is the cross product of obs_eci and east */
+    double north[3], north_norm[3];
+    cross_product(east, down, north);
+    vec3_norm(north, north_norm);
+    
+    /* Since just the angle with the 'north' vector only gives as partial information (an
+       angle 0..PI), we'll look at the angle with the 'east' vector as well */
+    double cos_az_north = dot_product(north_norm, dir_perp_norm);
+    double cos_az_east = dot_product(east_norm, dir_perp_norm);
+    double angle_az_north = acos(cos_az_north);
+    double angle_az_east = acos(cos_az_east);
+
+    double azimuth = angle_az_east < M_PI/2.0 ? angle_az_north : 2.0 * M_PI - angle_az_north;
+    
+
+    o->azimuth = rad_to_deg(azimuth);
 }

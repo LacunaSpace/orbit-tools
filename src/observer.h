@@ -12,6 +12,7 @@ typedef struct {
 typedef struct {
     double range;
     double elevation;
+    double azimuth;
 } observation;
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when);

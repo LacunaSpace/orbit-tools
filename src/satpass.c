@@ -45,6 +45,7 @@ typedef struct {
     int in_pass;
     time_t pass_start;
     double best_elevation;
+    double best_azimuth;
 } scanner;
 
 int main(int argc, char *argv[]) {
@@ -140,6 +141,7 @@ int main(int argc, char *argv[]) {
                 scanners[l].pass_start = start.tv_sec;
                 scanners[l].in_pass = 1;
                 scanners[l].best_elevation = result.elevation;
+                scanners[l].best_azimuth = result.azimuth;
             } else if(result.elevation < min_elevation && scanners[l].in_pass) {
                 scanners[l].in_pass = 0;
                 struct tm begin_f, end_f;
@@ -148,10 +150,11 @@ int main(int argc, char *argv[]) {
                 gmtime_r(&end, &end_f);
                 printf("%04d-%02d-%02dT%02d:%02d:%02dZ ", begin_f.tm_year + 1900, begin_f.tm_mon+1, begin_f.tm_mday, begin_f.tm_hour, begin_f.tm_min, begin_f.tm_sec);
                 printf("%04d-%02d-%02dT%02d:%02d:%02dZ ", end_f.tm_year + 1900, end_f.tm_mon+1, end_f.tm_mday, end_f.tm_hour, end_f.tm_min, end_f.tm_sec);
-                printf("%s %g\n", scanners[l].name, scanners[l].best_elevation);
+                printf("%s %g %g\n", scanners[l].name, scanners[l].best_elevation, scanners[l].best_azimuth);
                 count--;
             } else if(scanners[l].in_pass && result.elevation > scanners[l].best_elevation) {
                 scanners[l].best_elevation = result.elevation;
+                scanners[l].best_azimuth = result.azimuth;
             }
         }
         start.tv_sec++;
