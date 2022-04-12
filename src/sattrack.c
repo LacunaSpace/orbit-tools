@@ -42,7 +42,7 @@ static void usage(void) {
     printf("                             t: The date and time, formatted\n");
     printf("                             T: The date and time, in seconds since the epoch\n");
     printf("                             r: The range, in kilometers\n");
-    printf("                             e: The elevation, in degrees\n");
+    printf("                             l: The elevation, in degrees\n");
     printf("                             z: The azimuth, in degrees\n");
     printf("                             o: The longitude of the sub-satellite point, in degrees\n");
     printf("                             a: The latitude of the sub-satellite point, in degrees\n");
@@ -65,7 +65,7 @@ static field fields[] = {
     { "Time", "time", 't', fld_type_time_string },
     { "Time", "time", 'T', fld_type_time },
     { "Range", "range", 'r', fld_type_double },
-    { "Elevation", "elevation", 'e', fld_type_double },
+    { "Elevation", "elevation", 'l', fld_type_double },
     { "Azimuth", "azimuth", 'z', fld_type_double },
     { "SSP Longitude", "ssp_lon", 'o', fld_type_double },
     { "SSP Latitude", "ssp_lat", 'a', fld_type_double },
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
         usage_error("Missing filename");
 
     if(!selector)
-        selector = has_location ? "trezoaA" : "toaA";
+        selector = has_location ? "trlzoaA" : "toaA";
 
     if(fmt == fmt_auto) {
         if(count > 1) fmt = fmt_cols;

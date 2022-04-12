@@ -10,6 +10,7 @@
 #include "TLE.h"
 #include "observer.h"
 #include "util.h"
+#include "output.h"
 
 static char *executable;
 
@@ -35,6 +36,23 @@ static void usage(void) {
     printf("                                 default is the current date and time\n");
     printf("-f,--format=rows|cols          : Sets the output format. When not specified, rows\n");
     printf("                                 is used when count is 1, otherwise cols\n");
+    printf("-F,--fields=<FIELDS>           : Specifies the fields to include in the output.\n");
+    printf("                                 <FIELDS> is a string consisting of:\n");
+    printf("                                 s: The pass start time, formatted\n");
+    printf("                                 S: The pass start time, in seconds since the epoch\n");
+    printf("                                 e: The pass end time, formatted\n");
+    printf("                                 E: The pass end time, in seconds since the epoch\n");
+    printf("                                 t: The time of closest approach, formatted\n");
+    printf("                                 T: The time of closest approach, in seconds since the epoch\n");
+    printf("                                 d: The pass duration, in seconds\n");
+    printf("                                 l: The highest elevation, in degrees\n");
+    printf("                                 n: The name of the satellite\n");
+    printf("                                 z: The azimuth when the elevation is the highest\n");
+    printf("                                 Z: The azimuth at the start of the pass\n");
+    printf("                                 S: The azimuth at the end of the pass\n");
+    printf("                                 The default is ndstel\n");
+    printf("-H,--headers                   : When the format is cols, first print a row with headers\n");
+    
 }
 
 static void usage_error(char *msg) {
@@ -54,12 +72,21 @@ typedef struct {
     double end_azimuth;
 } scanner;
 
-
-static void print_timestamp(time_t t) {
-    struct tm f;
-    gmtime_r(&t, &f); 
-    printf("%04d-%02d-%02dT%02d:%02d:%02dZ", f.tm_year + 1900, f.tm_mon+1, f.tm_mday, f.tm_hour, f.tm_min, f.tm_sec);
-}
+static field fields[] = {
+    { "Pass start", "pass_start", 's', fld_type_time_string },
+    { "Pass start", "pass_start", 'S', fld_type_time },
+    { "Pass end", "pass_end", 'e', fld_type_time_string },
+    { "Pass end", "pass_end", 'E', fld_type_time },
+    { "Time of closest approach", "tca", 't', fld_type_time_string },
+    { "Time of closest approach", "tca", 'T', fld_type_time },
+    { "Duration", "duration", 'd', fld_type_time },
+    { "Best elevation", "elevation", 'l', fld_type_double },
+    { "Satellite", "satellite", 'n', fld_type_string },
+    { "TCA azimuth", "tca_azimuth", 'z', fld_type_double },
+    { "Start azimuth", "start_azimuth", 'Z', fld_type_double },
+    { "End azimuth", "end_azimuth", 'S', fld_type_double },
+    { NULL }
+};
 
 int main(int argc, char *argv[]) {
     executable = argv[0];
@@ -72,6 +99,8 @@ int main(int argc, char *argv[]) {
         { "count", required_argument, NULL, 'c' },
         { "start", required_argument, NULL, 's' },
         { "format", required_argument, NULL, 'f' },
+        { "fields", required_argument, NULL, 'F' },
+        { "headers", no_argument, NULL, 'H' },
         { NULL }
     };
 
@@ -87,6 +116,8 @@ int main(int argc, char *argv[]) {
     int count = 1;
     char *sat_name = NULL;
     int min_elevation = 0;
+    char *selector = NULL;
+    int headers = 0;
 
     enum {
         fmt_auto,
@@ -94,7 +125,7 @@ int main(int argc, char *argv[]) {
         fmt_rows
     } fmt = fmt_auto;
 
-    while((c = getopt_long(argc, argv, "hl:n:e:c:s:f:", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hl:n:e:c:s:f:F:H", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -123,6 +154,14 @@ int main(int argc, char *argv[]) {
                 if(string_starts_with("rows", optarg)) fmt = fmt_rows;
                 else if(string_starts_with("cols", optarg)) fmt = fmt_cols;
                 else usage_error("Invalid format");
+                break;
+            case 'F':
+                if(check_selector(fields, optarg))
+                    usage_error("Invalid fields-string");
+                selector = strdup(optarg);
+                break;
+            case 'H':
+                headers = 1;
                 break;
             default:
                 usage_error("invalid option");
@@ -160,6 +199,12 @@ int main(int argc, char *argv[]) {
 
     if(fmt == fmt_auto) fmt = count > 1 ? fmt_cols : fmt_rows;
 
+    if(!selector) selector = "ndstel";
+
+    field_value values[sizeof fields/sizeof fields[0] - 1 ];
+
+    if(fmt == fmt_cols && headers) render_headers(fields, selector);
+
     size_t pass_count = 0;
     while(pass_count < count) {
         observation result;
@@ -175,22 +220,19 @@ int main(int argc, char *argv[]) {
             } else if(result.elevation < min_elevation && scanners[l].in_pass) {
                 scanners[l].in_pass = 0;
                 time_t begin = scanners[l].pass_start, end = start.tv_sec-1;
-                if(fmt == fmt_cols) {
-                    print_timestamp(begin); printf(" ");
-                    print_timestamp(end); printf(" ");
-                    printf("%s %g %g\n", scanners[l].name, scanners[l].best_elevation, scanners[l].best_azimuth);
-                } else {
-                    if(pass_count) printf("------------------------------------------------\n");
-                    printf("AOS         : "); print_timestamp(begin); printf("\n");
-                    printf("TCA         : "); print_timestamp(scanners[l].tca); printf("\n");
-                    printf("LOS         : "); print_timestamp(end); printf("\n");
-                    printf("Duration    : %lds\n", start.tv_sec - scanners[l].pass_start);
-                    printf("Elevation   : %g\n", scanners[l].best_elevation);
-                    printf("AOS azimuth : %g\n", scanners[l].start_azimuth);
-                    printf("TCA azimuth : %g\n", scanners[l].best_azimuth);
-                    printf("LOS azimuth : %g\n", result.azimuth);
-                    printf("Satellite   : %s\n", scanners[l].name);
-                }
+                values[0].value.time_value = begin;
+                values[1].value.time_value = begin;
+                values[2].value.time_value = end;
+                values[3].value.time_value = end;
+                values[4].value.time_value = scanners[l].tca;
+                values[5].value.time_value = scanners[l].tca;
+                values[6].value.time_value = end - begin;
+                values[7].value.double_value = scanners[l].best_elevation;
+                values[8].value.string_value = scanners[l].name ? scanners[l].name : "unknown";
+                values[9].value.double_value = scanners[l].best_azimuth;
+                values[10].value.double_value = scanners[l].start_azimuth;
+                values[11].value.double_value = scanners[l].end_azimuth;
+                render(pass_count, fields, values, selector, fmt == fmt_rows);
                 pass_count++;
             } else if(scanners[l].in_pass && result.elevation > scanners[l].best_elevation) {
                 scanners[l].best_elevation = result.elevation;
