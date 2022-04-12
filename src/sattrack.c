@@ -10,6 +10,8 @@
 #include "opt_util.h"
 #include "tle_loader.h"
 #include "observer.h"
+#include "util.h"
+#include "output.h"
 
 static char *executable;
 
@@ -31,6 +33,22 @@ static void usage(void) {
     printf("                             satellites, specify the name of the satellite to\n");
     printf("                             be used. The default is to use the first satellite\n");
     printf("                             from the file.\n");
+    printf("-f,--format=rows|cols      : sets the output format. When not specified, rows is\n");
+    printf("                             used when count is 1, otherwise cols\n");
+    printf("-H,--headers               : when output format is cols, print a row with headers\n");
+    printf("                             as first row\n");
+    printf("-F,--fields=<FIELDS>       : specifies the fields to print. <FIELDS> consists of the\n");
+    printf("                             following characters:\n");
+    printf("                             t: The date and time, formatted\n");
+    printf("                             T: The date and time, in seconds since the epoch\n");
+    printf("                             r: The range, in kilometers\n");
+    printf("                             e: The elevation, in degrees\n");
+    printf("                             z: The azimuth, in degrees\n");
+    printf("                             o: The longitude of the sub-satellite point, in degrees\n");
+    printf("                             a: The latitude of the sub-satellite point, in degrees\n");
+    printf("                             A: The satellite altitude, in kilometers\n");
+    printf("                             The default is trezoaA when a location is specified,\n");
+    printf("                             toaA when no location is specified.\n");
     printf("\n");
     printf("<TLE-FILE> is the path to the TLE file. Use - to read from stdin\n");
     printf("\n");
@@ -43,6 +61,18 @@ static void usage_error(char *msg) {
     exit(EX_USAGE);
 }
 
+static field fields[] = {
+    { "Time", "time", 't', fld_type_time_string },
+    { "Time", "time", 'T', fld_type_time },
+    { "Range", "range", 'r', fld_type_double },
+    { "Elevation", "elevation", 'e', fld_type_double },
+    { "Azimuth", "azimuth", 'z', fld_type_double },
+    { "SSP Longitude", "ssp_lon", 'o', fld_type_double },
+    { "SSP Latitude", "ssp_lat", 'a', fld_type_double },
+    { "Altitude", "altitude", 'A', fld_type_double },
+    { NULL }
+};    
+
 int main(int argc, char *argv[]) {
     executable = argv[0];
     opterr = 0;
@@ -54,20 +84,25 @@ int main(int argc, char *argv[]) {
         { "count", required_argument, NULL, 'c' },
         { "interval", required_argument, NULL, 'i' },
         { "satellite-name", required_argument, NULL, 'n' },
+        { "format", required_argument, NULL, 'f' },
+        { "fields", required_argument, NULL, 'F' },
+        { "headers", no_argument, NULL, 'H' },
         { NULL }
     };
 
     observer obs;
     obs.alt = 0;
+    int has_location = 0;
     struct timeval start;
     gettimeofday(&start, 0);
     start.tv_usec = 0;
     int count = 1;
     int interval = 1;
     char *satellite_name = NULL;
-    
-
-    while((c = getopt_long(argc, argv, "hl:s:c:i:n:", longopts, NULL)) != -1) {
+    enum { fmt_auto, fmt_rows, fmt_cols } fmt = fmt_auto;
+    char *selector = NULL;
+    int headers = 0;
+    while((c = getopt_long(argc, argv, "hl:s:c:i:n:f:F:H", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -75,6 +110,7 @@ int main(int argc, char *argv[]) {
             case 'l':
                 if(optarg_as_lon_lat(&obs.lon, &obs.lat))
                     usage_error("Invalid location");          
+                has_location = 1;
                 break;
             case 's':
                 if(optarg_as_datetime(&start.tv_sec))
@@ -92,6 +128,20 @@ int main(int argc, char *argv[]) {
                 free(satellite_name);
                 satellite_name = strdup(optarg);
                 break;
+            case 'f':
+                if(string_starts_with("rows", optarg)) fmt = fmt_rows;
+                else if(string_starts_with("cols", optarg)) fmt = fmt_cols;
+                else usage_error("Invalid format");
+                break;
+            case 'F':
+                if(check_selector(fields, optarg)) 
+                    usage_error("Invalid fields-string");
+                free(selector);
+                selector = strdup(optarg);
+                break;
+            case 'H':
+                headers = 1;
+                break;
             default:
                 usage_error("Invalid option");
                 break;
@@ -100,6 +150,14 @@ int main(int argc, char *argv[]) {
 
     if(optind != argc-1) 
         usage_error("Missing filename");
+
+    if(!selector)
+        selector = has_location ? "trezoaA" : "toaA";
+
+    if(fmt == fmt_auto) {
+        if(count > 1) fmt = fmt_cols;
+        else fmt = fmt_rows;
+    }
 
     loaded_tle *lt = load_tles_from_filename(argv[argc-1]);
     if(!lt) usage_error("Failed to read file");
@@ -112,13 +170,22 @@ int main(int argc, char *argv[]) {
 
     TLE *tle = &target_tle->tle;
 
+    if(fmt == fmt_cols && headers) render_headers(fields, selector);
+
+    field_value values[sizeof fields/sizeof fields[0] - 1];
 
     for(size_t l=0; l<count; l++) {
         observation result;
         observe(&obs, &result, tle, start.tv_sec);
-        struct tm fmt;
-        gmtime_r(&start.tv_sec, &fmt);
-        printf("%04d-%02d-%02dT%02d:%02d:%02dZ %g %g %g %g %g %g\n", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday, fmt.tm_hour, fmt.tm_min, fmt.tm_sec, result.range, result.elevation, result.azimuth, result.ssp_lon, result.ssp_lat, result.altitude);
+        values[0].value.time_value = start.tv_sec;
+        values[1].value.time_value = start.tv_sec;
+        values[2].value.double_value = result.range;
+        values[3].value.double_value = result.elevation;
+        values[4].value.double_value = result.azimuth;
+        values[5].value.double_value = result.ssp_lon;
+        values[6].value.double_value = result.ssp_lat;
+        values[7].value.double_value = result.altitude;
+        render(l, fields, values, selector, fmt == fmt_rows);
 
         start.tv_sec += interval;
     }

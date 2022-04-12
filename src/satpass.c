@@ -9,6 +9,7 @@
 #include "tle_loader.h"
 #include "TLE.h"
 #include "observer.h"
+#include "util.h"
 
 static char *executable;
 
@@ -32,7 +33,7 @@ static void usage(void) {
     printf("-s,--start=<START>             : Start searching at the specified start-date and\n");
     printf("                                 -time, specified as yyyy-mm-ddThh:mm:ssZ. The\n");
     printf("                                 default is the current date and time\n");
-    printf("-s,--format=rows|cols          : Sets the output format. When not specified, rows\n");
+    printf("-f,--format=rows|cols          : Sets the output format. When not specified, rows\n");
     printf("                                 is used when count is 1, otherwise cols\n");
 }
 
@@ -53,14 +54,6 @@ typedef struct {
     double end_azimuth;
 } scanner;
 
-static int starts_with(char *s, char *prefix) {
-    while(*s && *prefix) {
-        if(*s != *prefix) return 0;
-        s++;
-        prefix++;
-    }
-    return !(*prefix);
-}
 
 static void print_timestamp(time_t t) {
     struct tm f;
@@ -127,8 +120,8 @@ int main(int argc, char *argv[]) {
                     usage_error("Invalid start");
                 break;
             case 'f':
-                if(starts_with("rows", optarg)) fmt = fmt_rows;
-                else if(starts_with("cols", optarg)) fmt = fmt_cols;
+                if(string_starts_with("rows", optarg)) fmt = fmt_rows;
+                else if(string_starts_with("cols", optarg)) fmt = fmt_cols;
                 else usage_error("Invalid format");
                 break;
             default:
