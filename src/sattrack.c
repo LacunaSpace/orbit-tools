@@ -51,9 +51,6 @@ static void usage(void) {
     printf("                             toaA when no location is specified.\n");
     printf("\n");
     printf("<TLE-FILE> is the path to the TLE file. Use - to read from stdin\n");
-    printf("\n");
-    printf("The output consists of space-separated values, one for each calculation.\n");
-    printf("The values are: datetime, range in km, elevation in degrees\n");
 }
 
 static void usage_error(char *msg) {

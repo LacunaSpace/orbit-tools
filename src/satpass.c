@@ -42,7 +42,7 @@ static void usage(void) {
     printf("                                 S: The pass start time, in seconds since the epoch\n");
     printf("                                 e: The pass end time, formatted\n");
     printf("                                 E: The pass end time, in seconds since the epoch\n");
-    printf("                                 t: The time of closest approach, formatted\n");
+    printf("                                 t: The time of closest approach, formatted\n"); 
     printf("                                 T: The time of closest approach, in seconds since the epoch\n");
     printf("                                 d: The pass duration, in seconds\n");
     printf("                                 l: The highest elevation, in degrees\n");
