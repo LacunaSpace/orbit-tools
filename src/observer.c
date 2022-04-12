@@ -39,14 +39,26 @@ static void lla_to_ecef(double lon_deg, double lat_deg, double alt, double ecef[
     ecef[2] = z;
 }
 
+static double get_earth_rotation(double time) {
+    double delta_t = time - J2000;
+    return WGS84_OMEGA * delta_t + deg_to_rad(EARTH_ANGLE_AT_J2000);
+}
+
 /* time is number of seconds since 1/1/1970 */
 static void ecef_to_eci(double ecef[3], double time, double eci[3]) {
-    double delta_t = time - J2000;
-    double a = WGS84_OMEGA * delta_t + deg_to_rad(EARTH_ANGLE_AT_J2000);
+    double a = get_earth_rotation(time);
 
     eci[0] = ecef[0] * cos(a) - ecef[1] * sin(a);
     eci[1] = ecef[0] * sin(a) + ecef[1] * cos(a);
     eci[2] = ecef[2];
+}
+
+static void eci_to_ecef(double eci[3], double time, double ecef[3]) {
+    double a = -get_earth_rotation(time);
+
+    ecef[0] = eci[0] * cos(a) - eci[1] * sin(a);
+    ecef[1] = eci[0] * sin(a) + eci[1] * cos(a);
+    ecef[2] = eci[2];
 }
 
 static double vec3_len(double vec[3]) {
@@ -151,7 +163,23 @@ void observe(observer *obs, observation *o, TLE *tle, time_t when) {
     double angle_az_east = acos(cos_az_east);
 
     double azimuth = angle_az_east < M_PI/2.0 ? angle_az_north : 2.0 * M_PI - angle_az_north;
-    
-
     o->azimuth = rad_to_deg(azimuth);
+
+    /* Now we calculate the longitude and latitude of the SSP (sub-satellite point). For this,
+       we act as if the earth is a perfect sphere with radius 1, this will yield the correct
+       lon and lat */
+    double sat_ecef[3], sat_ecef_norm[3];
+    eci_to_ecef(sat_eci, when, sat_ecef);
+    vec3_norm(sat_ecef, sat_ecef_norm);
+
+    double ssp_lat = asin(sat_ecef_norm[2]);
+    double ssp_lon = atan2(sat_ecef_norm[1], sat_ecef_norm[0]);
+    o->ssp_lon = rad_to_deg(ssp_lon);
+    o->ssp_lat = rad_to_deg(ssp_lat);
+
+    /* Finally to calculate the satellite altitude, we'll transform ssp_lon/ssp_lat to ecef (using
+       the WGS84 ellipsoid) at altitude 0, and simply subtract the length of the vector from sat_ecef */
+    double ssp_ecef[3];
+    lla_to_ecef(o->ssp_lon, o->ssp_lat, 0, ssp_ecef);
+    o->altitude = vec3_len(sat_ecef) - vec3_len(ssp_ecef);
 }

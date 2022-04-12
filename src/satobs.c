@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
         observe(&obs, &result, tle, start.tv_sec);
         struct tm fmt;
         gmtime_r(&start.tv_sec, &fmt);
-        printf("%04d-%02d-%02dT%02d:%02d:%02dZ %g %g %g\n", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday, fmt.tm_hour, fmt.tm_min, fmt.tm_sec, result.range, result.elevation, result.azimuth);
+        printf("%04d-%02d-%02dT%02d:%02d:%02dZ %g %g %g %g %g %g\n", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday, fmt.tm_hour, fmt.tm_min, fmt.tm_sec, result.range, result.elevation, result.azimuth, result.ssp_lon, result.ssp_lat, result.altitude);
 
         start.tv_sec += interval;
     }
