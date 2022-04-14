@@ -49,7 +49,7 @@ static void usage(void) {
     printf("                                 n: The name of the satellite\n");
     printf("                                 z: The azimuth when the elevation is the highest\n");
     printf("                                 Z: The azimuth at the start of the pass\n");
-    printf("                                 S: The azimuth at the end of the pass\n");
+    printf("                                 Y: The azimuth at the end of the pass\n");
     printf("                                 The default is ndstel\n");
     printf("-H,--headers                   : When the format is cols, first print a row with headers\n");
     
@@ -69,7 +69,6 @@ typedef struct {
     double best_elevation;
     double best_azimuth;
     double start_azimuth;
-    double end_azimuth;
 } scanner;
 
 static field fields[] = {
@@ -84,7 +83,7 @@ static field fields[] = {
     { "Satellite", "satellite", 'n', fld_type_string },
     { "TCA azimuth", "tca_azimuth", 'z', fld_type_double },
     { "Start azimuth", "start_azimuth", 'Z', fld_type_double },
-    { "End azimuth", "end_azimuth", 'S', fld_type_double },
+    { "End azimuth", "end_azimuth", 'Y', fld_type_double },
     { NULL }
 };
 
@@ -234,7 +233,7 @@ int main(int argc, char *argv[]) {
                 values[8].value.string_value = scanners[l].name ? scanners[l].name : "unknown";
                 values[9].value.double_value = scanners[l].best_azimuth;
                 values[10].value.double_value = scanners[l].start_azimuth;
-                values[11].value.double_value = scanners[l].end_azimuth;
+                values[11].value.double_value = result.azimuth;
                 render(pass_count, fields, values, selector, fmt == fmt_rows);
                 pass_count++;
             } else if(scanners[l].in_pass && result.elevation > scanners[l].best_elevation) {
