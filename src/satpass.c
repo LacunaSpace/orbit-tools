@@ -196,6 +196,9 @@ int main(int argc, char *argv[]) {
             scanners[l].tle = &p->tle;
         }
     }
+    for(size_t l=0; l<nr_sats; l++) {
+        scanners[l].in_pass = 0;
+    }
 
     if(fmt == fmt_auto) fmt = count > 1 ? fmt_cols : fmt_rows;
 
