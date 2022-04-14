@@ -32,7 +32,7 @@ static void render_cols(int count, field *fields, field_value *values, char *sel
             case fld_type_time_string:
                 gmtime_r(&v->value.time_value, &fmt);
                 printf("%04d-%02d-%02dT%02d:%02d:%02dZ", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday,
-                                                         fmt.tm_hour, fmt.tm_min, fmt.tm_sec);
+                                                           fmt.tm_hour, fmt.tm_min, fmt.tm_sec);
                 break;
             case fld_type_time:
                 printf("%lu", v->value.time_value);
@@ -49,8 +49,13 @@ static void render_cols(int count, field *fields, field_value *values, char *sel
     printf("\n");
 }
 
+static int width = 0;
+
 static void render_rows(int count, field *fields, field_value *values, char *selector) {
-    if(count) printf("------------------------------\n");
+    if(count) {
+        for(size_t l=0; l<width; l++) printf("-");
+        printf("\n");
+    }
 
     int max = 0;
     for(char *s=selector; *s; s++) {
@@ -66,22 +71,24 @@ static void render_rows(int count, field *fields, field_value *values, char *sel
         find_field(*s, fields, values, &f, &v);
         printf("%*s : ", max, f->label);
         struct tm fmt;
+        int w;
         switch(f->type) {
             case fld_type_time_string:
                 gmtime_r(&v->value.time_value, &fmt);
-                printf("%04d-%02d-%02dT%02d:%02d:%02dZ", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday,
-                                                         fmt.tm_hour, fmt.tm_min, fmt.tm_sec);
+                printf("%04d-%02d-%02dT%02d:%02d:%02dZ%n", fmt.tm_year + 1900, fmt.tm_mon+1, fmt.tm_mday,
+                                                           fmt.tm_hour, fmt.tm_min, fmt.tm_sec, &w);
                 break;
             case fld_type_time:
-                printf("%lu", v->value.time_value);
+                printf("%lu%n", v->value.time_value, &w);
                 break;
             case fld_type_double:
-                printf("%g", v->value.double_value);
+                printf("%g%n", v->value.double_value, &w);
                 break;
             case fld_type_string:
-                printf("%s", v->value.string_value);
+                printf("%s%n", v->value.string_value, &w);
                 break;
         }
+        if(!count && max+w+3 > width) width=max+w+3;
         printf("\n");
     }
 }
