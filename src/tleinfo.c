@@ -9,18 +9,19 @@
 static char *executable;
 
 void usage(void) {
-    fprintf(stderr, "Usage: %s [OPTION...] <TLE_FILE>\n", executable);
-    fprintf(stderr, "\n");
-    fprintf(stderr, "TLE_FILE is the name of the TLE-file. It\n");
-    fprintf(stderr, "may contain data of one or more satellites. Use\n");
-    fprintf(stderr, "- to read from stdin\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "Options are:\n");
-    fprintf(stderr, "-h,--help                 : show this help and exit\n");
-    fprintf(stderr, "-n,--satelite-name=<NAME> : the name of the satellite of\n");
-    fprintf(stderr, "                            which to show information. The\n");
-    fprintf(stderr, "                            default is to show information about\n");
-    fprintf(stderr, "                            all satellites in the file\n");
+    printf("Usage: %s [OPTION...] [<TLE_FILE>]\n", executable);
+    printf("\n");
+    printf("TLE_FILE is the name of the TLE-file. It\n");
+    printf("may contain data of one or more satellites. Use\n");
+    printf("- to read from stdin. When not supplied, $ORBIT_TOOLS_TLE\n");
+    printf("is consulted for the filename\n");
+    printf("\n");
+    printf("Options are:\n");
+    printf("-h,--help                 : show this help and exit\n");
+    printf("-n,--satelite-name=<NAME> : the name of the satellite of\n");
+    printf("                            which to show information. The\n");
+    printf("                            default is to show information about\n");
+    printf("                            all satellites in the file\n");
 }
 
 static void usage_error(char *msg) {
@@ -72,9 +73,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if(optind != argc-1) usage_error("Filename missing");
+    char *file = NULL;
+    if(optind == argc-1) file=argv[argc-1];
+    else if(optind == argc && getenv("ORBIT_TOOLS_TLE")) file = getenv("ORBIT_TOOLS_TLE");
+    else usage_error("either supply a filename or set $ORBIT_TOOLS_TLE");
 
-    loaded_tle *lt = load_tles_from_filename(argv[argc-1]);
+    loaded_tle *lt = load_tles_from_filename(file);
     if(!lt) usage_error("Failed to load file");
 
     if(sat_name) {

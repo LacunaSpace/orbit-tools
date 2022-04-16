@@ -16,7 +16,7 @@
 static char *executable;
 
 static void usage(void) {
-    printf("Usage: %s [OPTION...] <TLE-FILE>\n", executable);
+    printf("Usage: %s [OPTION...] [<TLE-FILE>]\n", executable);
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help                  : show this help and exit.\n");
@@ -50,7 +50,9 @@ static void usage(void) {
     printf("                             The default is trezoaA when a location is specified,\n");
     printf("                             toaA when no location is specified.\n");
     printf("\n");
-    printf("<TLE-FILE> is the path to the TLE file. Use - to read from stdin\n");
+    printf("<TLE-FILE> is the path to the TLE file. Use - to read from stdin. When\n");
+    printf("<TLE-FILE> is not supplied, environment variable $ORBIT_TOOLS_TLE is consulted\n");
+    printf("for the file to be used.\n");
 }
 
 static void usage_error(char *msg) {
@@ -145,8 +147,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if(optind != argc-1) 
-        usage_error("Missing filename");
+    char *file = NULL;
+    if(optind == argc-1) file = argv[optind];
+    else if(optind == argc && getenv("ORBIT_TOOLS_TLE")) file = getenv("ORBIT_TOOLS_TLE");
+    else usage_error("either supply a file or set $ORBIT_TOOLS_TLE");
 
     if(!selector)
         selector = has_location ? "trlzoaA" : "toaA";
@@ -156,7 +160,7 @@ int main(int argc, char *argv[]) {
         else fmt = fmt_rows;
     }
 
-    loaded_tle *lt = load_tles_from_filename(argv[argc-1]);
+    loaded_tle *lt = load_tles_from_filename(file);
     if(!lt) usage_error("Failed to read file");
 
     loaded_tle *target_tle = get_tle_by_name(lt, satellite_name);

@@ -15,10 +15,11 @@
 static char *executable;
 
 static void usage(void) {
-    printf("Usage: %s [OPTION...] <TLE-FILE>\n", executable);
+    printf("Usage: %s [OPTION...] [<TLE-FILE>]\n", executable);
     printf("\n");
     printf("<TLE-FILE> is a file containing one or more TLEs. Use\n");
-    printf("- to read the TLEs from stdin.\n");
+    printf("- to read the TLEs from stdin. If <TLE-FILE> is not supplied\n");
+    printf("then $ORBIT_TOOLS_TLE must be set to the filename to be used\n");
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help                      : Print this help and exit\n");
@@ -168,9 +169,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if(optind != argc-1) usage_error("Missing filename");
+    char *file = NULL;
+    if(optind == argc-1) file = argv[argc-1];
+    else if(optind == argc && getenv("ORBIT_TOOLS_TLE")) file = getenv("ORBIT_TOOLS_TLE");
+    else usage_error("Supply a filename or set ORBIT_TOOLS_TLE");
 
-    loaded_tle *lt = load_tles_from_filename(argv[argc-1]);
+    loaded_tle *lt = load_tles_from_filename(file);
     if(!lt) usage_error("Failed to read file");
 
     int nr_sats;
