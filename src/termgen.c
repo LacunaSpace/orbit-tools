@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
     for(size_t l=0; l<nr_cities; l++) {
         if(!strcasecmp(argv[argc-1], cities[l].name) ||
            !strcasecmp(argv[argc-1], cities[l].name_ascii)) {
-            printf("%g,%g\n", cities[l].lon, cities[l].lat);
+            printf("%g,%g\n", cities[l].lat, cities[l].lon);
             exit(0);
         }
     }

@@ -6,11 +6,11 @@
 
 int optarg_as_lon_lat(double *lon, double *lat) {
     char *p;
-    *lon = strtod(optarg, &p);
-    if(*p != ',' || *lon < -180.0 || *lon > 180.0) return -1;
+    *lat = strtod(optarg, &p);
+    if(*p != ',' || *lat < -90.0 || *lat > 90.0) return -1;
 
-    *lat = strtod(++p, &p);
-    if(*p || *lat < -90.0 || *lat > 90.0) return -1;
+    *lon = strtod(++p, &p);
+    if(*p || *lon < -180.0 || *lon > 180.0) return -1;
 
     return 0;
 }
@@ -22,6 +22,7 @@ int optarg_as_datetime(time_t *t) {
         *t = timegm(&time0);
         return 0;
     }
+    fprintf(stderr, "Invalid: [%s]\n", optarg);
     return -1;
 }
 

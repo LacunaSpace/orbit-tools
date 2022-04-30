@@ -23,7 +23,7 @@ static void usage(void) {
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help                      : Print this help and exit\n");
-    printf("-l,--location=<LON,LAT>        : Specify the location on the ground, in degrees.\n");
+    printf("-l,--location=<LAT,LON>        : Specify the location on the ground, in degrees.\n");
     printf("                                 The default is 0,0.\n");
     printf("-n,--satellite-name=<NAME>     : Find passes for the named satellite. When\n");
     printf("                                 not specified, find passes for all satellites\n");

@@ -20,7 +20,7 @@ static void usage(void) {
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help                  : show this help and exit.\n");
-    printf("-l,--location=<LON,LAT>    : specify the location on the ground, in degrees.\n");
+    printf("-l,--location=<LAT,LON>    : specify the location on the ground, in degrees.\n");
     printf("                             The default is 0,0.\n");
     printf("-s,--start=<TIMESTAMP>     : specify the date and time at which to start the,\n");
     printf("                             calculation, formatted as yyyy-mm-ddThh-mm-ssZ.\n");
