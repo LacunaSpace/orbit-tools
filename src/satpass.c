@@ -34,7 +34,9 @@ static void usage(void) {
     printf("                                 is 1.\n");
     printf("-s,--start=<START>             : Start searching at the specified start-date and\n");
     printf("                                 -time, specified as yyyy-mm-ddThh:mm:ssZ. The\n");
-    printf("                                 default is the current date and time\n");
+    printf("                                 default is the current date and time. Alternatively\n");
+    printf("                                 the start-date can be specified as just yyyy-mm-dd,\n");
+    printf("                                 which is short for yyyy-mm-ddT00:00:00Z\n");
     printf("-f,--format=rows|cols          : Sets the output format. When not specified, rows\n");
     printf("                                 is used when count is 1, otherwise cols\n");
     printf("-F,--fields=<FIELDS>           : Specifies the fields to include in the output.\n");
@@ -147,7 +149,7 @@ int main(int argc, char *argv[]) {
                     usage_error("Invalid count");
                 break;
             case 's':
-                if(optarg_as_datetime(&start.tv_sec))
+                if(optarg_as_datetime_extended(&start.tv_sec))
                     usage_error("Invalid start");
                 break;
             case 'f':

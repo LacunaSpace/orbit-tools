@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <getopt.h>
+#include <string.h>
 #include "opt_util.h"
 
 int optarg_as_lon_lat(double *lon, double *lat) {
@@ -22,7 +23,18 @@ int optarg_as_datetime(time_t *t) {
         *t = timegm(&time0);
         return 0;
     }
-    fprintf(stderr, "Invalid: [%s]\n", optarg);
+    return -1;
+}
+
+int optarg_as_datetime_extended(time_t *t) {
+    struct tm time0;
+    memset(&time0, 0, sizeof time0);
+    char *p = strptime(optarg, "%Y-%m-%dT%H:%M:%SZ", &time0);
+    if(!p || *p) p = strptime(optarg, "%Y-%M-%d", &time0);
+    if(p && !*p) {
+        *t = timegm(&time0);
+        return 0;
+    }
     return -1;
 }
 

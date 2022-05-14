@@ -3,7 +3,10 @@
 /* Assumes optarg contains a lon and lat in degrees, separate by a comma */
 int optarg_as_lon_lat(double *lon, double *lat);
 
-/* Assumes optarg contains a timestamp as yyy-mm-ddThh-mm-ssZ */
+/* Assumes optarg contains a timestamp as yyyy-mm-ddThh-mm-ssZ */
 int optarg_as_datetime(time_t *t); 
+
+/* Assumes optarg contains a timestamp as yyyy-mm-ddThh-mm-ssZ or just yyyy-mm-dd */
+int optarg_as_datetime_extended(time_t *t); 
 
 int optarg_as_int(signed int *i, signed int min, signed int max);
