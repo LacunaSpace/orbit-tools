@@ -30,7 +30,7 @@ int optarg_as_datetime_extended(time_t *t) {
     struct tm time0;
     memset(&time0, 0, sizeof time0);
     char *p = strptime(optarg, "%Y-%m-%dT%H:%M:%SZ", &time0);
-    if(!p || *p) p = strptime(optarg, "%Y-%M-%d", &time0);
+    if(!p || *p) p = strptime(optarg, "%Y-%m-%d", &time0);
     if(p && !*p) {
         *t = timegm(&time0);
         return 0;
