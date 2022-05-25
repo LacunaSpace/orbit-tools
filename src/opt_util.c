@@ -44,3 +44,17 @@ int optarg_as_int(signed int *i, signed int min, signed int max) {
     if(*p || *i < min || *i > max) return -1;
     return 0;
 }
+
+int optarg_as_double_excl_excl(double *d, double min, double max) {
+    char *p;
+    *d = strtod(optarg, &p);
+    if(*p || *d <= min || *d >= max) return -1;
+    return 0;
+}
+
+int optarg_as_double_incl_excl(double *d, double min, double max) {
+    char *p;
+    *d = strtod(optarg, &p);
+    if(*p || *d < min || *d >= max) return -1;
+    return 0;
+}

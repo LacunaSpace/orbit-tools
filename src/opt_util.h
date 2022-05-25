@@ -10,3 +10,9 @@ int optarg_as_datetime(time_t *t);
 int optarg_as_datetime_extended(time_t *t); 
 
 int optarg_as_int(signed int *i, signed int min, signed int max);
+
+/* Only values > min and < max are accepted */
+int optarg_as_double_excl_excl(double *d, double min, double max);
+
+/* Values >= min and < max are accepted */
+int optarg_as_double_incl_excl(double *d, double min, double max);
