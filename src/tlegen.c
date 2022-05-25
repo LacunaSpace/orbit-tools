@@ -6,6 +6,7 @@
 #include <time.h>
 #include <string.h>
 #include <sys/time.h>
+#include <math.h>
 
 #include "opt_util.h"
 
@@ -128,6 +129,7 @@ int main(int argc, char *argv[]) {
     char *launch_piece = strdup(DEFAULT_LAUNCH_PIECE);
     time_t epoch;
     get_current_time(&epoch);
+    struct tm epoch_tm;
     double ballistic_coeff = DEFAULT_BALLISTIC_COEFFICIENT;
     double second_deriv_mean_motion = DEFAULT_2ND_DERIV_MEAN_MOTION;
     double bstar = DEFAULT_BSTAR;
@@ -162,7 +164,7 @@ int main(int argc, char *argv[]) {
         { NULL }
     };
 
-    char optstring[] = ":he:b:B:i:r:E:p:m:M:";
+    char optstring[] = "+he:b:B:i:r:E:p:m:M:";
     int c;
     opterr = 0;
     while((c = getopt_long(argc, argv, optstring, longopts, NULL)) != -1) {
@@ -241,25 +243,40 @@ int main(int argc, char *argv[]) {
                 if(optarg_as_int(&revolution_number, 0, 99999))
                     usage_error("Invalid revolution-number");
                 break;
-                
-            
-    
-/*
-            case 'c':
-                if(optarg_as_int(&count, 1, MAX_COUNT))
-                    usage_error("Invalid count");
-                break;
-            case 'e':
-                if(optarg_as_datetime(&epoch))
-                    usage_error("Invalid epoch");
-                break;
-            case 'b':
-                if(optarg_as_double(&ballistic_coefficient, 0.0, 10.0))
-                    usage_error("Invalid ballistic coefficient");
-                break;
-*/
+            case '?':
+                usage_error("Invalid option");
+                break;             
         }
     }
+
+    gmtime_r(&epoch, &epoch_tm);
+
+    char line1[70];
+    sprintf(&line1[0], "1 ");
+    sprintf(&line1[2], "%5d", cat_number);
+    sprintf(&line1[7], "%c ", classification);
+    sprintf(&line1[9], "%02d", launch_year % 100);
+    sprintf(&line1[11], "%03d", launch_number);
+    sprintf(&line1[14], "%3s ", launch_piece);
+    sprintf(&line1[18], "%02d", epoch_tm.tm_year % 100);
+    sprintf(&line1[20], "%012.8f ", epoch_frac(&epoch_tm));
+    sprintf(&line1[33], "%c.%.08u ", ballistic_coeff < 0.0 ? '-' : ' ',
+                                    (unsigned)(100000000 * (fabs(ballistic_coeff) - trunc(fabs(ballistic_coeff)))) );
+    char buf[13];
+    sprintf(buf, "%11.4e", 10 * second_deriv_mean_motion);
+    sprintf(&line1[44], "%c%c%c%c%c%c%c%c ", buf[0], buf[1], buf[3], buf[4], buf[5], buf[6], buf[8], buf[10]);
+    sprintf(buf, "%11.4e", 10 * bstar);
+    sprintf(&line1[53], "%c%c%c%c%c%c%c%c ", buf[0], buf[1], buf[3], buf[4], buf[5], buf[6], buf[8], buf[10]);
+    sprintf(&line1[62], "0 ");
+    sprintf(&line1[64], "%4d", element_set_number);
+
+    int checksum = 0;
+    for(size_t l=0; l<67; l++) 
+        if(line1[l] >= '0' && line1[l] <= '9') checksum += (line1[l] - '0');
+        else if(line1[l] == '-') checksum++;
+    sprintf(&line1[68], "%d", checksum % 10);
+
+    printf("%s\n", line1);
 
 /*
     for(size_t l=0; l<count; l++) {
