@@ -10,7 +10,9 @@
 
 #include "opt_util.h"
 
-#define DEFAULT_CAT_NUMBER (0)
+#define DEFAULT_NAME ("NONAME")
+#define DEFAULT_LINES (3)
+#define DEFAULT_CAT_NUMBER (90000)
 #define DEFAULT_CLASSIFICATION ('U')
 #define DEFAULT_LAUNCH_YEAR (2022)
 #define DEFAULT_LAUNCH_NUMBER (0)
@@ -18,7 +20,7 @@
 #define DEFAULT_BALLISTIC_COEFFICIENT (0.0)
 #define DEFAULT_2ND_DERIV_MEAN_MOTION (0.0)
 #define DEFAULT_BSTAR (0.0)
-#define DEFAULT_ELEMENT_SET_NUMBER (0)
+#define DEFAULT_ELEMENT_SET_NUMBER (999)
 
 #define DEFAULT_INCLINATION (97.7)
 #define DEFAULT_RAAN (0.0)
@@ -37,6 +39,10 @@ static void usage(void) {
     printf("\n");
     printf("General options:\n");
     printf("-h,--help                        : Print this help and exit.\n");
+    printf("-n,--name=NAME                   : Set the satellite name. The default is %s\n", DEFAULT_NAME);
+    printf("-l,--lines=2|3                   : Set the format to 2 or 3 lines. When set\n");
+    printf("                                   to 3 lines, the first line contains the\n");
+    printf("                                   satellite name. The default is %d.\n", DEFAULT_LINES);
     printf("\n");
     printf("Options to set TLE elements directly:\n");
     printf("   --cat-number=CAT-NUMBER       : Set the catalognumber. The catalognumber\n");
@@ -82,8 +88,6 @@ static void usage(void) {
     printf("                                   a value > 0.0 and < 100.0. The default is %g.\n", DEFAULT_MEAN_MOTION);
     printf("   --revolution-number=REVNUMBER : Set the revolution number at the TLE epoch to\n");
     printf("                                   a positive integer < 100000. The default is %d.\n", DEFAULT_REVOLUTION_NUMBER);
-    
-
 }
 
 
@@ -100,7 +104,7 @@ static double epoch_frac(struct tm *epoch) {
     year.tm_mday = 1;
     long frac_secs = timegm(epoch) - timegm(&year);
     int secs_in_day = 24 * 60 * 60;
-    return (double)(frac_secs/secs_in_day) + (double)(frac_secs % secs_in_day)/(double)secs_in_day;
+    return 1.0 + (double)(frac_secs/secs_in_day) + (double)(frac_secs % secs_in_day)/(double)secs_in_day;
 }
 
 static void get_current_time(time_t *t) {
@@ -109,6 +113,13 @@ static void get_current_time(time_t *t) {
     *t = tv.tv_sec;
 }
 
+static void set_checksum(char *line) {
+    int checksum = 0;
+    for(size_t l=0; l<68; l++) 
+        if(line[l] >= '0' && line[l] <= '9') checksum += (line[l] - '0');
+        else if(line[l] == '-') checksum++;
+    sprintf(&line[68], "%d", checksum % 10);
+}
 
 #define OPT_CATNUMBER (256)
 #define OPT_CLASSIFICATION (257)
@@ -122,6 +133,8 @@ static void get_current_time(time_t *t) {
 int main(int argc, char *argv[]) {
     executable = argv[0];
 
+    int lines = DEFAULT_LINES;
+    char *name = strdup(DEFAULT_NAME);
     int cat_number = DEFAULT_CAT_NUMBER;
     char classification = DEFAULT_CLASSIFICATION;
     int launch_year = DEFAULT_LAUNCH_YEAR;
@@ -144,6 +157,8 @@ int main(int argc, char *argv[]) {
     
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
+        { "name", required_argument, NULL, 'n' },
+        { "lines", required_argument, NULL, 'l' },
         { "cat-number", required_argument, NULL, OPT_CATNUMBER },
         { "classification", required_argument, NULL, OPT_CLASSIFICATION },
         { "launch-year", required_argument, NULL, OPT_LAUNCH_YEAR },
@@ -164,7 +179,7 @@ int main(int argc, char *argv[]) {
         { NULL }
     };
 
-    char optstring[] = "+he:b:B:i:r:E:p:m:M:";
+    char optstring[] = "+hn:l:e:b:B:i:r:E:p:m:M:";
     int c;
     opterr = 0;
     while((c = getopt_long(argc, argv, optstring, longopts, NULL)) != -1) {
@@ -172,6 +187,15 @@ int main(int argc, char *argv[]) {
             case 'h':
                 usage();
                 exit(0);
+            case 'n':
+                free(name);
+                name = strdup(optarg);
+                break;
+            case 'l':
+                if(!strcmp(optarg, "2")) lines = 2;
+                else if(!strcmp(optarg, "3")) lines = 3;
+                else usage_error("Invalid lines");
+                break;
             case OPT_CATNUMBER:
                 if(optarg_as_int(&cat_number, 0, 99999)) 
                     usage_error("Invalid cat-number");
@@ -251,13 +275,15 @@ int main(int argc, char *argv[]) {
 
     gmtime_r(&epoch, &epoch_tm);
 
+    if(lines == 3) printf("%s\n", name);
+
     char line1[70];
     sprintf(&line1[0], "1 ");
     sprintf(&line1[2], "%5d", cat_number);
     sprintf(&line1[7], "%c ", classification);
     sprintf(&line1[9], "%02d", launch_year % 100);
     sprintf(&line1[11], "%03d", launch_number);
-    sprintf(&line1[14], "%3s ", launch_piece);
+    sprintf(&line1[14], "%-3s ", launch_piece);
     sprintf(&line1[18], "%02d", epoch_tm.tm_year % 100);
     sprintf(&line1[20], "%012.8f ", epoch_frac(&epoch_tm));
     sprintf(&line1[33], "%c.%.08u ", ballistic_coeff < 0.0 ? '-' : ' ',
@@ -270,13 +296,23 @@ int main(int argc, char *argv[]) {
     sprintf(&line1[62], "0 ");
     sprintf(&line1[64], "%4d", element_set_number);
 
-    int checksum = 0;
-    for(size_t l=0; l<67; l++) 
-        if(line1[l] >= '0' && line1[l] <= '9') checksum += (line1[l] - '0');
-        else if(line1[l] == '-') checksum++;
-    sprintf(&line1[68], "%d", checksum % 10);
+    set_checksum(line1);
 
-    printf("%s\n", line1);
+    char line2[70];
+    sprintf(&line2[0], "2 ");
+    sprintf(&line2[2], "%5d ", cat_number);
+    sprintf(&line2[8], "%8.4f ", inclination);
+    sprintf(&line2[17], "%8.4f ", raan);
+    sprintf(buf, "%9.7f", eccentricity);
+    sprintf(&line2[26], "%s ", &buf[2]);
+    sprintf(&line2[34], "%8.4f ", arg_of_perigee);
+    sprintf(&line2[43], "%8.4f ", mean_anomaly);
+    sprintf(&line2[52], "%11.8f ", mean_motion);
+    sprintf(&line2[63], "%5d", revolution_number);
+
+    set_checksum(line2);
+
+    printf("%s\n%s\n", line1, line2);
 
 /*
     for(size_t l=0; l<count; l++) {
