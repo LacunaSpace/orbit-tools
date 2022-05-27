@@ -24,7 +24,7 @@
 
 #define DEFAULT_INCLINATION (97.7)
 #define DEFAULT_RAAN (0.0)
-#define DEFAULT_ECCENTRICITY (0.0)
+#define DEFAULT_ECCENTRICITY (0.0000001)
 #define DEFAULT_ARG_OF_PERIGEE (0.0)
 #define DEFAULT_MEAN_ANOMALY (0.0)
 #define DEFAULT_MEAN_MOTION (15.0)
@@ -79,7 +79,8 @@ static void usage(void) {
     printf("                                   a value in degrees greater >= 0.0 and < 360.0. The\n");
     printf("                                   default is %g.\n", DEFAULT_RAAN);
     printf("-E,--eccentricity=ECCENTRICIY    : Set the eccentricity to a value greater than or\n");
-    printf("                                   equal to 0 and less than 1. The default is %g.\n", DEFAULT_ECCENTRICITY);
+    printf("                                   equal to 0 and less than 1. The default is %g. (gpredict\n", DEFAULT_ECCENTRICITY);
+    printf("                                   doesn't like an eccentricity of 0).\n");
     printf("-p,--arg-of-perigee=ARG          : Set the argument of perigee to a value in degrees\n");   
     printf("                                   >= 0.0 and < 360.0. The default is %g.\n", DEFAULT_ARG_OF_PERIGEE);
     printf("-m,--mean-anomaly=MEANANOMALY    : Set the mean anomaly to a value in degrees >= 0.0 and\n");
@@ -171,7 +172,7 @@ int main(int argc, char *argv[]) {
         { "element-set-number", required_argument, NULL, OPT_ELEMENT_SET_NUMBER },
         { "inclination", required_argument, NULL, 'i' },
         { "raan", required_argument, NULL, 'r' },
-        { "eccentricity", required_argument, NULL, 'e' },
+        { "eccentricity", required_argument, NULL, 'E' },
         { "arg-of-perigee", required_argument, NULL, 'p' },
         { "mean-anomaly", required_argument, NULL, 'm' },
         { "mean-motion", required_argument, NULL, 'M' },
