@@ -10,8 +10,15 @@
 
 #include "opt_util.h"
 
+#define EARTH_RADIUS (6371.0)
+#define MAX_RADIUS (100000.0)
+#define EARTH_MASS (5.972E24)
+#define G (6.67E-11)
+
 #define DEFAULT_NAME ("NONAME")
 #define DEFAULT_LINES (3)
+#define DEFAULT_MIN_ECCENTRICITY (1E-7)
+
 #define DEFAULT_CAT_NUMBER (90000)
 #define DEFAULT_CLASSIFICATION ('U')
 #define DEFAULT_LAUNCH_YEAR (2022)
@@ -24,7 +31,7 @@
 
 #define DEFAULT_INCLINATION (97.7)
 #define DEFAULT_RAAN (0.0)
-#define DEFAULT_ECCENTRICITY (0.0000001)
+#define DEFAULT_ECCENTRICITY (0.0)
 #define DEFAULT_ARG_OF_PERIGEE (0.0)
 #define DEFAULT_MEAN_ANOMALY (0.0)
 #define DEFAULT_MEAN_MOTION (15.0)
@@ -43,6 +50,12 @@ static void usage(void) {
     printf("-l,--lines=2|3                   : Set the format to 2 or 3 lines. When set\n");
     printf("                                   to 3 lines, the first line contains the\n");
     printf("                                   satellite name. The default is %d.\n", DEFAULT_LINES);
+    printf("   --minimum-eccentricity=VALUE  : Is a setting or calculation results in an eccentricity\n");
+    printf("                                   below this value, it will be clamped to this value. This\n");
+    printf("                                   is because some applications (gpredict) do not handle\n");
+    printf("                                   an eccentricity of 0 well. The default value is %g - there's\n", DEFAULT_MIN_ECCENTRICITY);
+    printf("                                   little reason to change this other than to set it to 0 to\n");
+    printf("                                   switch clamping off.\n");
     printf("\n");
     printf("Options to set TLE elements directly:\n");
     printf("   --cat-number=CAT-NUMBER       : Set the catalognumber. The catalognumber\n");
@@ -79,8 +92,7 @@ static void usage(void) {
     printf("                                   a value in degrees greater >= 0.0 and < 360.0. The\n");
     printf("                                   default is %g.\n", DEFAULT_RAAN);
     printf("-E,--eccentricity=ECCENTRICIY    : Set the eccentricity to a value greater than or\n");
-    printf("                                   equal to 0 and less than 1. The default is %g. (gpredict\n", DEFAULT_ECCENTRICITY);
-    printf("                                   doesn't like an eccentricity of 0).\n");
+    printf("                                   equal to 0 and less than 1. The default is %g.\n", DEFAULT_ECCENTRICITY);
     printf("-p,--arg-of-perigee=ARG          : Set the argument of perigee to a value in degrees\n");   
     printf("                                   >= 0.0 and < 360.0. The default is %g.\n", DEFAULT_ARG_OF_PERIGEE);
     printf("-m,--mean-anomaly=MEANANOMALY    : Set the mean anomaly to a value in degrees >= 0.0 and\n");
@@ -89,6 +101,29 @@ static void usage(void) {
     printf("                                   a value > 0.0 and < 100.0. The default is %g.\n", DEFAULT_MEAN_MOTION);
     printf("   --revolution-number=REVNUMBER : Set the revolution number at the TLE epoch to\n");
     printf("                                   a positive integer < 100000. The default is %d.\n", DEFAULT_REVOLUTION_NUMBER);
+    printf("\n");
+    printf("Options to set the orbit radius and automatically infer mean motion\n");
+    printf("and eccentricity:\n");
+    printf("   --semi-major-axis=VALUE       : Set the orbit's semi major axis, in kilometers.\n");
+    printf("   --semi-minor-axis=VALUE       : Set the orbit's semi minor axis, in kilometers.\n");
+    printf("                                   Both the semi major and the semi minor axis\n");
+    printf("                                   must be greater than the earth's radius (%f km)\n", EARTH_RADIUS);
+    printf("                                   and less than %f. The semi minor axis must not be\n", MAX_RADIUS);
+    printf("                                   greater than the semi major axis. If only one of\n");
+    printf("                                   the two is set, the eccentricity is used to set derive\n");
+    printf("                                   the other one. If both are set, the eccentricity is\n");
+    printf("                                   derived and will override an eccentricity specified\n");
+    printf("                                   with --eccentricity.\n");
+    printf("                                   Setting the semi major and/or minor axis will also\n");
+    printf("                                   cause the mean motion to be overridden.\n");
+    printf("   --apogee-altitude=VALUE       : Set the altitude at apogee, in kilometers. This is the same\n");
+    printf("                                   as setting the semi major axis to the sum of the given\n");
+    printf("                                   altitude and the earth radius.\n");
+    printf("   --perigee-altitude=VALUE      : Set the altitude at perigee, in kilometers. This is the same\n");
+    printf("                                   as setting the semi minor axis to the sum of the given\n");
+    printf("                                   altitude and the earth radius.\n");
+    printf("-a,--altitude=VALUE              : Set the altitude of both apogee and perigee, in kilometers.\n");
+    
 }
 
 
@@ -130,12 +165,18 @@ static void set_checksum(char *line) {
 #define OPT_2ND_DERIV_MEAN_MOTION (261)
 #define OPT_ELEMENT_SET_NUMBER (262)
 #define OPT_REVOLUTION_NUMBER (263)
+#define OPT_SEMI_MAJOR_AXIS (264)
+#define OPT_SEMI_MINOR_AXIS (265)
+#define OPT_PERIGEE_ALTITUDE (266)
+#define OPT_APOGEE_ALTITUDE (267)
+#define OPT_MINIMUM_ECCENTRICITY (268)
 
 int main(int argc, char *argv[]) {
     executable = argv[0];
 
     int lines = DEFAULT_LINES;
     char *name = strdup(DEFAULT_NAME);
+    double min_eccentricity = DEFAULT_MIN_ECCENTRICITY;
     int cat_number = DEFAULT_CAT_NUMBER;
     char classification = DEFAULT_CLASSIFICATION;
     int launch_year = DEFAULT_LAUNCH_YEAR;
@@ -155,11 +196,17 @@ int main(int argc, char *argv[]) {
     double mean_anomaly = DEFAULT_MEAN_ANOMALY;
     double mean_motion = DEFAULT_MEAN_MOTION;
     int revolution_number = DEFAULT_REVOLUTION_NUMBER;
+
+    double semi_major_axis;
+    int semi_major_axis_set = 0;
+    double semi_minor_axis;
+    int semi_minor_axis_set = 0;
     
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
         { "name", required_argument, NULL, 'n' },
         { "lines", required_argument, NULL, 'l' },
+        { "minimum-eccentricity", required_argument, NULL, OPT_MINIMUM_ECCENTRICITY },
         { "cat-number", required_argument, NULL, OPT_CATNUMBER },
         { "classification", required_argument, NULL, OPT_CLASSIFICATION },
         { "launch-year", required_argument, NULL, OPT_LAUNCH_YEAR },
@@ -177,10 +224,15 @@ int main(int argc, char *argv[]) {
         { "mean-anomaly", required_argument, NULL, 'm' },
         { "mean-motion", required_argument, NULL, 'M' },
         { "revolution-number", required_argument, NULL, OPT_REVOLUTION_NUMBER },
+        { "semi-major-axis", required_argument, NULL, OPT_SEMI_MAJOR_AXIS },
+        { "semi-minor-axis", required_argument, NULL, OPT_SEMI_MINOR_AXIS },
+        { "apogee-altitude", required_argument, NULL, OPT_APOGEE_ALTITUDE },
+        { "perigee-altitude", required_argument, NULL, OPT_PERIGEE_ALTITUDE },
+        { "altitude", required_argument, NULL, 'a' },
         { NULL }
     };
 
-    char optstring[] = "+hn:l:e:b:B:i:r:E:p:m:M:";
+    char optstring[] = "+hn:l:e:b:B:i:r:E:p:m:M:a:";
     int c;
     opterr = 0;
     while((c = getopt_long(argc, argv, optstring, longopts, NULL)) != -1) {
@@ -196,6 +248,10 @@ int main(int argc, char *argv[]) {
                 if(!strcmp(optarg, "2")) lines = 2;
                 else if(!strcmp(optarg, "3")) lines = 3;
                 else usage_error("Invalid lines");
+                break;
+            case OPT_MINIMUM_ECCENTRICITY:
+                if(optarg_as_double_incl_excl(&min_eccentricity, 0.0, 1.0))
+                    usage_error("Invalid minimum-eccentricity");
                 break;
             case OPT_CATNUMBER:
                 if(optarg_as_int(&cat_number, 0, 99999)) 
@@ -268,6 +324,42 @@ int main(int argc, char *argv[]) {
                 if(optarg_as_int(&revolution_number, 0, 99999))
                     usage_error("Invalid revolution-number");
                 break;
+            case OPT_SEMI_MAJOR_AXIS:
+                if(optarg_as_double_incl_excl(&semi_major_axis, EARTH_RADIUS, MAX_RADIUS))
+                    usage_error("Invalid semi-major-axis");
+                semi_major_axis_set = 1;
+                break;
+            case OPT_SEMI_MINOR_AXIS:
+                if(optarg_as_double_incl_excl(&semi_minor_axis, EARTH_RADIUS, MAX_RADIUS))
+                    usage_error("Invalid semi-minor-axis");
+                semi_minor_axis_set = 1;
+                break;
+            case OPT_APOGEE_ALTITUDE: {
+                double v;
+                if(optarg_as_double_incl_excl(&v, 0.0, MAX_RADIUS-EARTH_RADIUS))
+                    usage_error("Invalid apogee-altitude");
+                semi_major_axis = v + EARTH_RADIUS;
+                semi_major_axis_set = 1;
+                break;
+            }
+            case OPT_PERIGEE_ALTITUDE: {
+                double v;
+                if(optarg_as_double_incl_excl(&v, 0.0, MAX_RADIUS-EARTH_RADIUS))
+                    usage_error("Invalid perigee-altitude");
+                semi_minor_axis = v + EARTH_RADIUS;
+                semi_minor_axis_set = 1;
+                break;
+            }
+            case 'a': {
+                double v;
+                if(optarg_as_double_incl_excl(&v, 0.0, MAX_RADIUS-EARTH_RADIUS))
+                    usage_error("Invalid altitude");
+                semi_minor_axis = v + EARTH_RADIUS;
+                semi_major_axis = v + EARTH_RADIUS;
+                semi_minor_axis_set = 1;
+                semi_major_axis_set = 1;
+                break;
+            }
             case '?':
                 usage_error("Invalid option");
                 break;             
@@ -275,6 +367,24 @@ int main(int argc, char *argv[]) {
     }
 
     gmtime_r(&epoch, &epoch_tm);
+
+    if(semi_major_axis_set && semi_minor_axis_set) {
+        if(semi_minor_axis > semi_major_axis) usage_error("Invalid semi-minor-axis");
+        double b_over_a = semi_minor_axis / semi_major_axis;
+        eccentricity = (b_over_a - 1) / (b_over_a + 1);
+    } else if(semi_major_axis_set) {
+        semi_minor_axis = semi_major_axis * (1.0 - eccentricity) / (1.0 + eccentricity);
+    } else if(semi_minor_axis_set) {
+        semi_major_axis = semi_minor_axis * (1.0 + eccentricity) / (1.0 - eccentricity);
+    }
+
+    if(semi_major_axis_set || semi_minor_axis_set) {
+        double mean_motion_rad_sec = sqrt((G * EARTH_MASS) / pow(semi_major_axis * 1000.0, 3.0));
+        mean_motion = 24 * 60 * 60 * mean_motion_rad_sec / (2.0 * M_PI);
+    }
+
+    if(eccentricity < min_eccentricity)
+        eccentricity = min_eccentricity;
 
     if(lines == 3) printf("%s\n", name);
 
