@@ -2,7 +2,7 @@
 #define __sgp4tleheader__  
 
 #include "SGP4.h"
-
+#include "tledata.h"
 
 typedef struct TLE {
     ElsetRec rec;
@@ -26,6 +26,7 @@ typedef struct TLE {
 } TLE;
 
 void parseLines(TLE *tle, char *line1, char *line2);
+void fromTLEData(TLE *tle, tledata *td);
 
 long parseEpoch(ElsetRec *rec, char *str);
 

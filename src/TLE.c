@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "TLE.h"
 #include "SGP4.h"
+#include "tledata.h"
 
 // parse the double
 double gd(char *str, int ind1, int ind2);
@@ -64,6 +65,34 @@ void parseLines(TLE *tle, char *line1, char *line2)
 
     setValsToRec(tle, &tle->rec);
 }
+
+void fromTLEData(TLE *tle, tledata *td) {
+    tle->rec.whichconst=wgs72;
+    tle->line1[0] = 0;
+    tle->line2[0] = 0;
+    snprintf(tle->intlid, 11, "%02d%03d%-3s",
+             td->launch_year, td->launch_number, td->launch_piece);
+    tle->rec.classification = td->classification;
+    snprintf(tle->objectID, 5, "%05d", td->cat_number);
+    tle->ndot = td->ballistic_coeff;
+    tle->nddot = td->second_deriv_mean_motion;
+    tle->bstar = td->bstar;
+    tle->elnum = td->element_set_number;
+    tle->incDeg = td->inclination;
+    tle->raanDeg = td->raan;
+    tle->ecc = td->eccentricity;
+    tle->argpDeg = td->arg_of_perigee;
+    tle->maDeg = td->mean_anomaly;
+    tle->n = td->mean_motion;
+    tle->revnum = td->revolution_number;
+    tle->sgp4Error = 0;
+    tle->epoch = td->epoch * 1000;
+    setValsToRec(tle, &tle->rec);
+    
+    
+}
+
+
 
 bool isLeap(int year)
 {

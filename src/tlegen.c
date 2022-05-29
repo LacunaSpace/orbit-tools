@@ -10,6 +10,9 @@
 #include <errno.h>
 
 #include "opt_util.h"
+#include "tledata.h"
+#include "observer.h"
+#include "TLE.h"
 
 #define EARTH_RADIUS (6371.0)
 #define MAX_RADIUS (100000.0)
@@ -121,8 +124,15 @@ static void usage(void) {
     printf("   --apogee-altitude=VALUE       : Set the altitude at apogee, in kilometers.\n"); 
     printf("   --perigee-altitude=VALUE      : Set the altitude at perigee, in kilometers.\n");
     printf("-a,--altitude=VALUE              : Set the altitude of both apogee and perigee, in kilometers.\n");
-    
-    
+    printf("\n");
+    printf("Options to specify a target-time and location, where the RAAN and mean-anomaly\n");
+    printf("are recalculated such that the satellite will be directly over the given location\n");
+    printf("at the target time.\n");
+    printf("\n");
+    printf("   --target-time=DATETIME        : Set the target date and time as YYYY-MM-DDTHH:MM:SSZ\n");
+    printf("                                   or just YYYY-MM-DD. The default is the TLE epoch.\n");
+    printf("   --target-location=LAT,LON     : Set the target location as latitude and longitude, in\n");
+    printf("                                   degrees.");
 }
 
 
@@ -156,6 +166,10 @@ static void set_checksum(char *line) {
     sprintf(&line[68], "%d", checksum % 10);
 }
 
+static double deg_to_rad(double d) {
+    return d * M_PI/180.0;
+}
+
 #define OPT_CATNUMBER (256)
 #define OPT_CLASSIFICATION (257)
 #define OPT_LAUNCH_YEAR (258)
@@ -168,6 +182,8 @@ static void set_checksum(char *line) {
 #define OPT_PERIGEE_ALTITUDE (265)
 #define OPT_APOGEE_ALTITUDE (266)
 #define OPT_MINIMUM_ECCENTRICITY (267)
+#define OPT_TARGET_TIME (268)
+#define OPT_TARGET_LOCATION (269)
 
 int main(int argc, char *argv[]) {
     executable = argv[0];
@@ -176,25 +192,27 @@ int main(int argc, char *argv[]) {
     int lines = DEFAULT_LINES;
     char *name = strdup(DEFAULT_NAME);
     double min_eccentricity = DEFAULT_MIN_ECCENTRICITY;
-    int cat_number = DEFAULT_CAT_NUMBER;
-    char classification = DEFAULT_CLASSIFICATION;
-    int launch_year = DEFAULT_LAUNCH_YEAR;
-    int launch_number = DEFAULT_LAUNCH_NUMBER;
-    char *launch_piece = strdup(DEFAULT_LAUNCH_PIECE);
-    time_t epoch;
-    get_current_time(&epoch);
     struct tm epoch_tm;
-    double ballistic_coeff = DEFAULT_BALLISTIC_COEFFICIENT;
-    double second_deriv_mean_motion = DEFAULT_2ND_DERIV_MEAN_MOTION;
-    double bstar = DEFAULT_BSTAR;
-    int element_set_number = DEFAULT_ELEMENT_SET_NUMBER;
-    double inclination = DEFAULT_INCLINATION;
-    double raan = DEFAULT_RAAN;
-    double eccentricity = DEFAULT_ECCENTRICITY;
-    double arg_of_perigee = DEFAULT_ARG_OF_PERIGEE;
-    double mean_anomaly = DEFAULT_MEAN_ANOMALY;
-    double mean_motion = DEFAULT_MEAN_MOTION;
-    int revolution_number = DEFAULT_REVOLUTION_NUMBER;
+
+    tledata td = {
+        .cat_number = DEFAULT_CAT_NUMBER,
+        .classification = DEFAULT_CLASSIFICATION,
+        .launch_year = DEFAULT_LAUNCH_YEAR,
+        .launch_number = DEFAULT_LAUNCH_NUMBER,
+        .launch_piece = strdup(DEFAULT_LAUNCH_PIECE),
+        .ballistic_coeff = DEFAULT_BALLISTIC_COEFFICIENT,
+        .second_deriv_mean_motion = DEFAULT_2ND_DERIV_MEAN_MOTION,
+        .bstar = DEFAULT_BSTAR,
+        .element_set_number = DEFAULT_ELEMENT_SET_NUMBER,
+        .inclination = DEFAULT_INCLINATION,
+        .raan = DEFAULT_RAAN,
+        .eccentricity = DEFAULT_ECCENTRICITY,
+        .arg_of_perigee = DEFAULT_ARG_OF_PERIGEE,
+        .mean_anomaly = DEFAULT_MEAN_ANOMALY,
+        .mean_motion = DEFAULT_MEAN_MOTION,
+        .revolution_number = DEFAULT_REVOLUTION_NUMBER
+    };
+    get_current_time(&td.epoch);
 
     double semi_major_axis;
     int semi_major_axis_set = 0;
@@ -202,6 +220,11 @@ int main(int argc, char *argv[]) {
     int apogee_altitude_set = 0;
     double perigee_altitude;
     int perigee_altitude_set = 0;
+
+    time_t target_time;
+    int target_time_set = 0;
+    double target_location_lat, target_location_lon;
+    int target_location_set = 0;
     
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
@@ -229,6 +252,8 @@ int main(int argc, char *argv[]) {
         { "apogee-altitude", required_argument, NULL, OPT_APOGEE_ALTITUDE },
         { "perigee-altitude", required_argument, NULL, OPT_PERIGEE_ALTITUDE },
         { "altitude", required_argument, NULL, 'a' },
+        { "target-time", required_argument, NULL, OPT_TARGET_TIME },
+        { "target-location", required_argument, NULL, OPT_TARGET_LOCATION },
         { NULL }
     };
 
@@ -258,74 +283,74 @@ int main(int argc, char *argv[]) {
                     usage_error("Invalid minimum-eccentricity");
                 break;
             case OPT_CATNUMBER:
-                if(optarg_as_int(&cat_number, 0, 99999)) 
+                if(optarg_as_int(&td.cat_number, 0, 99999)) 
                     usage_error("Invalid cat-number");
                 break;
             case OPT_CLASSIFICATION:
                 if(strcmp(optarg, "U") && strcmp(optarg, "C") && strcmp(optarg, "S"))
                     usage_error("Invalid classification");
-                classification = *optarg;
+                td.classification = *optarg;
                 break;
             case OPT_LAUNCH_YEAR:
-                if(optarg_as_int(&launch_year, 0, 9999))
+                if(optarg_as_int(&td.launch_year, 0, 9999))
                     usage_error("Invalid launch-year");
                 break;
             case OPT_LAUNCH_NUMBER:
-                if(optarg_as_int(&launch_number, 0, 999))
+                if(optarg_as_int(&td.launch_number, 0, 999))
                     usage_error("Invalid launch-number");
                 break;
             case OPT_LAUNCH_PIECE:
                 if(strlen(optarg) > 3) 
                     usage_error("Invalid launch-piece");
-                free(launch_piece);
-                launch_piece = strdup(optarg);
+                free(td.launch_piece);
+                td.launch_piece = strdup(optarg);
                 break;
             case 'e':
-                if(optarg_as_datetime_extended(&epoch)) 
+                if(optarg_as_datetime_extended(&td.epoch)) 
                     usage_error("Invalid epoch");
                 break;
             case 'b':
-                if(optarg_as_double_excl_excl(&ballistic_coeff, -1.0, 1.0))
+                if(optarg_as_double_excl_excl(&td.ballistic_coeff, -1.0, 1.0))
                     usage_error("Invalid ballistic-coefficient");
                 break;
             case OPT_2ND_DERIV_MEAN_MOTION:
-                if(optarg_as_double_excl_excl(&second_deriv_mean_motion, -1e9, 1e9))
+                if(optarg_as_double_excl_excl(&td.second_deriv_mean_motion, -1e9, 1e9))
                     usage_error("Invalid 2nd-deriv-mean-motion");
                 break;
             case 'B':
-                if(optarg_as_double_excl_excl(&bstar, -1e9, 1e9))
+                if(optarg_as_double_excl_excl(&td.bstar, -1e9, 1e9))
                     usage_error("Invalid bstar");
                 break;
             case OPT_ELEMENT_SET_NUMBER:
-                if(optarg_as_int(&element_set_number, 0, 9999))
+                if(optarg_as_int(&td.element_set_number, 0, 9999))
                     usage_error("Invalid element-set-number");
                 break;
             case 'i':
-                if(optarg_as_double_incl_excl(&inclination, 0.0, 180.0))
+                if(optarg_as_double_incl_excl(&td.inclination, 0.0, 180.0))
                     usage_error("Invalid inclination");
                 break;
             case 'r':
-                if(optarg_as_double_incl_excl(&raan, 0.0, 360.0))
+                if(optarg_as_double_incl_excl(&td.raan, 0.0, 360.0))
                     usage_error("Invalid raan");
                 break;
             case 'E':
-                if(optarg_as_double_incl_excl(&eccentricity, 0.0, 1.0))
+                if(optarg_as_double_incl_excl(&td.eccentricity, 0.0, 1.0))
                     usage_error("Invalid eccentricity");
                 break;
             case 'p':
-                if(optarg_as_double_incl_excl(&arg_of_perigee, 0.0, 360.0))
+                if(optarg_as_double_incl_excl(&td.arg_of_perigee, 0.0, 360.0))
                     usage_error("Invalid arg-of-perigee");
                 break;
             case 'm':
-                if(optarg_as_double_incl_excl(&mean_anomaly, 0.0, 360.0))
+                if(optarg_as_double_incl_excl(&td.mean_anomaly, 0.0, 360.0))
                     usage_error("Invalid mean-anomaly");
                 break;
             case 'M':
-                if(optarg_as_double_excl_excl(&mean_motion, 0.0, 100.0))
+                if(optarg_as_double_excl_excl(&td.mean_motion, 0.0, 100.0))
                     usage_error("Invalid mean-motion");
                 break;
             case OPT_REVOLUTION_NUMBER:
-                if(optarg_as_int(&revolution_number, 0, 99999))
+                if(optarg_as_int(&td.revolution_number, 0, 99999))
                     usage_error("Invalid revolution-number");
                 break;
             case OPT_SEMI_MAJOR_AXIS:
@@ -350,81 +375,128 @@ int main(int argc, char *argv[]) {
                 apogee_altitude_set = 1;
                 perigee_altitude_set = 1;
                 break;
+            case OPT_TARGET_TIME:
+                if(optarg_as_datetime_extended(&target_time))
+                    usage_error("Invalid target-time");
+                target_time_set = 1;
+                break;
+            case OPT_TARGET_LOCATION:
+                if(optarg_as_lon_lat(&target_location_lon, &target_location_lat))
+                    usage_error("Invalid target-location");
+                target_location_set = 1;
+                break;
             case '?':
                 usage_error("Invalid option");
                 break;             
         }
     }
 
-    gmtime_r(&epoch, &epoch_tm);
+    gmtime_r(&td.epoch, &epoch_tm);
 
     if(semi_major_axis_set && apogee_altitude_set && perigee_altitude_set) {
         usage_error("Cannot specify semi-major-axos, apogee-altitude and perigee-altitude at the same time");
     } else if(semi_major_axis_set && apogee_altitude_set) {
         double apogee = apogee_altitude + EARTH_RADIUS;
-        eccentricity = apogee/semi_major_axis - 1.0;
+        td.eccentricity = apogee/semi_major_axis - 1.0;
     } else if(semi_major_axis_set && perigee_altitude_set) {
         double perigee = perigee_altitude + EARTH_RADIUS;
-        eccentricity = 1.0 - perigee/semi_major_axis;
+        td.eccentricity = 1.0 - perigee/semi_major_axis;
     } else if(apogee_altitude_set && perigee_altitude_set) {
         if(perigee_altitude > apogee_altitude) 
             usage_error("perigee-altitude cannot exceed apogee-altitude");
         double apogee = apogee_altitude + EARTH_RADIUS;
         double perigee = perigee_altitude + EARTH_RADIUS;
         double apo_over_peri = apogee / perigee;
-        eccentricity = (apo_over_peri - 1.0) / (apo_over_peri + 1.0);
-        semi_major_axis = apogee / (1.0+eccentricity); /* Need this for mean motion calc later on */
+        td.eccentricity = (apo_over_peri - 1.0) / (apo_over_peri + 1.0);
+        semi_major_axis = apogee / (1.0+td.eccentricity); /* Need this for mean motion calc later on */
     } else if(semi_major_axis_set) {
         /* Do nothing, we'll use it to calc the mean motion */
     } else if(apogee_altitude_set) {
         double apogee = apogee_altitude + EARTH_RADIUS;
-        semi_major_axis = apogee / (1.0+eccentricity);
+        semi_major_axis = apogee / (1.0+td.eccentricity);
     } else if(perigee_altitude_set) {
         double perigee = perigee_altitude + EARTH_RADIUS;
-        semi_major_axis = perigee / (1.0-eccentricity);
+        semi_major_axis = perigee / (1.0-td.eccentricity);
     }
 
     if(semi_major_axis_set || perigee_altitude_set || apogee_altitude_set) {
         double mean_motion_rad_sec = sqrt((G * EARTH_MASS) / pow(semi_major_axis * 1000.0, 3.0));
-        mean_motion = 24 * 60 * 60 * mean_motion_rad_sec / (2.0 * M_PI);
+        td.mean_motion = 24 * 60 * 60 * mean_motion_rad_sec / (2.0 * M_PI);
     }
 
-    if(eccentricity < min_eccentricity)
-        eccentricity = min_eccentricity;
+    if(target_location_set) {
+        if(!target_time_set) target_time = td.epoch;
+        time_t time_diff = target_time - td.epoch;
+
+        /* First see at which time the latitude is reached, from the moment we 
+           cross the equator S->N */
+        double incl_rad = deg_to_rad(td.inclination),
+               lat_rad = deg_to_rad(target_location_lat),
+               omega_rad_sec = 2 * M_PI * td.mean_motion/(24 * 60 * 60);
+    
+        double delta = asin(sin(lat_rad)/sin(incl_rad)) / omega_rad_sec;
+
+        double period = 24 * 60 * 60 / td.mean_motion;
+
+
+        int desired = time_diff % (int)period;
+        /* Now adjust the mean anomaly such that the desired latitude is reached
+           at the target time */
+        int add = 360 * (delta - desired)/period;
+        td.mean_anomaly += add;
+        if(td.mean_anomaly >= 360) td.mean_anomaly -= 360;
+        else if(td.mean_anomaly < 0) td.mean_anomaly += 360;
+        
+        /* Use SGP4 to calculate the longitude when reaching this latitude */
+        TLE tle;
+        fromTLEData(&tle, &td);
+        observer obs = { 0, 0, 0 };
+        observation result;
+        observe(&obs, &result, &tle, target_time);
+
+        /* Adjust the RAAN to make the longitude match */
+        double lon_diff = target_location_lon - result.ssp_lon;
+        td.raan += lon_diff;
+        if(td.raan >= 360.0) td.raan -= 360.0;
+        else if(td.raan < 0) td.raan += 360.0;
+    }
+
+    if(td.eccentricity < min_eccentricity)
+        td.eccentricity = min_eccentricity;
 
 
     char line1[70];
     sprintf(&line1[0], "1 ");
-    sprintf(&line1[2], "%5d", cat_number);
-    sprintf(&line1[7], "%c ", classification);
-    sprintf(&line1[9], "%02d", launch_year % 100);
-    sprintf(&line1[11], "%03d", launch_number);
-    sprintf(&line1[14], "%-3s ", launch_piece);
+    sprintf(&line1[2], "%5d", td.cat_number);
+    sprintf(&line1[7], "%c ", td.classification);
+    sprintf(&line1[9], "%02d", td.launch_year % 100);
+    sprintf(&line1[11], "%03d", td.launch_number);
+    sprintf(&line1[14], "%-3s ", td.launch_piece);
     sprintf(&line1[18], "%02d", epoch_tm.tm_year % 100);
     sprintf(&line1[20], "%012.8f ", epoch_frac(&epoch_tm));
-    sprintf(&line1[33], "%c.%.08u ", ballistic_coeff < 0.0 ? '-' : ' ',
-                                    (unsigned)(100000000 * (fabs(ballistic_coeff) - trunc(fabs(ballistic_coeff)))) );
+    sprintf(&line1[33], "%c.%.08u ", td.ballistic_coeff < 0.0 ? '-' : ' ',
+                                    (unsigned)(100000000 * (fabs(td.ballistic_coeff) - trunc(fabs(td.ballistic_coeff)))) );
     char buf[13];
-    sprintf(buf, "%11.4e", 10 * second_deriv_mean_motion);
+    sprintf(buf, "%11.4e", 10 * td.second_deriv_mean_motion);
     sprintf(&line1[44], "%c%c%c%c%c%c%c%c ", buf[0], buf[1], buf[3], buf[4], buf[5], buf[6], buf[8], buf[10]);
-    sprintf(buf, "%11.4e", 10 * bstar);
+    sprintf(buf, "%11.4e", 10 * td.bstar);
     sprintf(&line1[53], "%c%c%c%c%c%c%c%c ", buf[0], buf[1], buf[3], buf[4], buf[5], buf[6], buf[8], buf[10]);
     sprintf(&line1[62], "0 ");
-    sprintf(&line1[64], "%4d", element_set_number);
+    sprintf(&line1[64], "%4d", td.element_set_number);
 
     set_checksum(line1);
 
     char line2[70];
     sprintf(&line2[0], "2 ");
-    sprintf(&line2[2], "%5d ", cat_number);
-    sprintf(&line2[8], "%8.4f ", inclination);
-    sprintf(&line2[17], "%8.4f ", raan);
-    sprintf(buf, "%9.7f", eccentricity);
+    sprintf(&line2[2], "%5d ", td.cat_number);
+    sprintf(&line2[8], "%8.4f ", td.inclination);
+    sprintf(&line2[17], "%8.4f ", td.raan);
+    sprintf(buf, "%9.7f", td.eccentricity);
     sprintf(&line2[26], "%s ", &buf[2]);
-    sprintf(&line2[34], "%8.4f ", arg_of_perigee);
-    sprintf(&line2[43], "%8.4f ", mean_anomaly);
-    sprintf(&line2[52], "%11.8f ", mean_motion);
-    sprintf(&line2[63], "%5d", revolution_number);
+    sprintf(&line2[34], "%8.4f ", td.arg_of_perigee);
+    sprintf(&line2[43], "%8.4f ", td.mean_anomaly);
+    sprintf(&line2[52], "%11.8f ", td.mean_motion);
+    sprintf(&line2[63], "%5d", td.revolution_number);
 
     set_checksum(line2);
 
