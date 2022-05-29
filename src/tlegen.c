@@ -132,7 +132,7 @@ static void usage(void) {
     printf("   --target-time=DATETIME        : Set the target date and time as YYYY-MM-DDTHH:MM:SSZ\n");
     printf("                                   or just YYYY-MM-DD. The default is the TLE epoch.\n");
     printf("   --target-location=LAT,LON     : Set the target location as latitude and longitude, in\n");
-    printf("                                   degrees.");
+    printf("                                   degrees.\n");
 }
 
 
