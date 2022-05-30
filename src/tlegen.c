@@ -231,6 +231,7 @@ int main(int argc, char *argv[]) {
         { "name", required_argument, NULL, 'n' },
         { "lines", required_argument, NULL, 'l' },
         { "minimum-eccentricity", required_argument, NULL, OPT_MINIMUM_ECCENTRICITY },
+        { "output", required_argument, NULL, 'o' },
         { "cat-number", required_argument, NULL, OPT_CATNUMBER },
         { "classification", required_argument, NULL, OPT_CLASSIFICATION },
         { "launch-year", required_argument, NULL, OPT_LAUNCH_YEAR },
