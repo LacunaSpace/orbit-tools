@@ -116,8 +116,8 @@ static void usage(void) {
     printf("If two options are given, the eccentricity will be overridden. It is an error to specify\n");
     printf("all three options.\n");
     printf("The mean motion will always be recalculated and overridden if any of the options\n");
-    printf("\n");
     printf("semi-major-axis, apogee-altitude or perigee-altitude is specified.\n");
+    printf("\n");
     printf("   --semi-major-axis=VALUE       : Set the orbit's semi major axis, in kilometers.\n");
     printf("                                   This must be greater than the earth's radius (%u km)\n", (unsigned int)EARTH_RADIUS);
     printf("                                   and less than %u.\n", (unsigned int)MAX_RADIUS);
