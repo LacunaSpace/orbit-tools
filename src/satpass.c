@@ -55,6 +55,8 @@ static void usage(void) {
     printf("                                 Y: The azimuth at the end of the pass\n");
     printf("                                 The default is ndstel\n");
     printf("-H,--headers                   : When the format is cols, first print a row with headers\n");
+    printf("-g,--give-up-after=<HOURS>     : When no pass found after <HOURS> hours, give up with an\n");
+    printf("                                 error. The default is 168 hours, or one week.\n");
     
 }
 
@@ -103,6 +105,7 @@ int main(int argc, char *argv[]) {
         { "format", required_argument, NULL, 'f' },
         { "fields", required_argument, NULL, 'F' },
         { "headers", no_argument, NULL, 'H' },
+        { "give-up-after", required_argument, NULL, 'g' },
         { NULL }
     };
 
@@ -120,6 +123,7 @@ int main(int argc, char *argv[]) {
     int min_elevation = 0;
     char *selector = NULL;
     int headers = 0;
+    int give_up_after = 7 * 24;
 
     enum {
         fmt_auto,
@@ -127,7 +131,7 @@ int main(int argc, char *argv[]) {
         fmt_rows
     } fmt = fmt_auto;
 
-    while((c = getopt_long(argc, argv, "hl:n:e:c:s:f:F:H", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hl:n:e:c:s:f:F:Hg:", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -164,6 +168,10 @@ int main(int argc, char *argv[]) {
                 break;
             case 'H':
                 headers = 1;
+                break;
+            case 'g':
+                if(optarg_as_int(&give_up_after, 1, INT_MAX))
+                    usage_error("Invalid give-up-after");
                 break;
             default:
                 usage_error("invalid option");
@@ -214,7 +222,8 @@ int main(int argc, char *argv[]) {
     if(fmt == fmt_cols && headers) render_headers(fields, selector);
 
     size_t pass_count = 0;
-    while(pass_count < count) {
+    long long int keep_going = give_up_after * 60 * 60;
+    while(pass_count < count && keep_going) {
         observation result;
         for(size_t l=0; l<nr_sats; l++) {
             observe(&obs, &result, scanners[l].tle, start.tv_sec);
@@ -242,6 +251,7 @@ int main(int argc, char *argv[]) {
                 values[11].value.double_value = result.azimuth;
                 render(pass_count, fields, values, selector, fmt == fmt_rows);
                 pass_count++;
+                keep_going = give_up_after * 60 * 60;
             } else if(scanners[l].in_pass && result.elevation > scanners[l].best_elevation) {
                 scanners[l].best_elevation = result.elevation;
                 scanners[l].best_azimuth = result.azimuth;
@@ -249,5 +259,12 @@ int main(int argc, char *argv[]) {
             }
         }
         start.tv_sec++;
+        keep_going--;
+    }
+
+    if(!keep_going) {
+        fprintf(stderr, "No more passes found within %d hours. Consider increasing --give-up-after\n",
+                        give_up_after);
+        exit(EX_UNAVAILABLE);
     }
 }
