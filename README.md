@@ -99,8 +99,65 @@ at least 50° (note the the `-e` option is a shorter alternative for `--min-elev
 satpass -e 50
 ```
 
+For a comprehensive overview of options, use `satpass --help`.
+
 `sattrack`
 ----------
+`sattrack` show the location of a satellite at a specified date and time. The
+simplest invocation of `sattrack` would be:
+```
+sattrack --name=ls2b /path/to/TLE.txt
+```
+Like `satpass`, this will read TLES from the file `/path/to/TLE.txt` - however,
+if this file contains more than one TLE, and no satellite name is specified with
+the `--name` option, the first TLE from the file will be used. Again, `-` can be
+used as filename to read from `stdin`, and if no filename at all is given, 
+`$ORBIT_TOOLS_TLE` will be consulted.
+
+By default, the satellite's location at the given date and time will be shown. This
+can be changed by the `--start` option, which allows to specify an alternative starttime.
+
+When not only the satellite's own location, but also its visibility from a certain
+location is required, specify that location with the `--location` switch:
+
+```
+sattrack --name=ls2b --location=52.3667,4.8833 /path/to/TLE.txt
+```
+
+To make a real-time display of this, use (this uses `termgen` again instead
+of specifying the location's coordinates directly):
+```
+while [ 1 ]; do
+    clear
+    sattrack --name=ls2b --location=$(termgen Amsterdam) /path/to/TLE.txt
+    sleep 1
+done
+```
+(or use `watch` if you have it installed)
+
+It is also possible to show a satellite's location at multiple points in time.
+To do this, use the `--count` and `--interval` options to generate `count` locations
+with `interval` seconds intervals, starting at the time specified with `--start`.
+
+Like `satpass`, both a human-readable row-oriented output, and a machine-readable
+column-oriented output are available, and by default, the row-oriented output is
+used when `count` is 1, the column-oriented otherwise. It can be explicitly set
+with the `--format` option.
+
+The output can further be modified with the `--fields` option. Consults the built-in
+help for a complete list of fields.
+
+The following example uses `sattrack` in combination with `gnuplot` to plot the elevation
+of the ls2b satellite during its 10 minute pass of the location at 0°/0° at 
+the 1st of June 2022 (note that the `--location=0,0` option could have omitted in
+this case since it's the default):
+
+```
+sattrack --name=ls2b --location=0,0 --start=2022-06-01T21:59:04Z \
+    --interval=10 --count=60 -fields=Tl |\
+    gnuplot -p -e "plot '-' using 1:2"  
+```
+
 
 `termgen`
 ---------
