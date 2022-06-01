@@ -200,6 +200,49 @@ tleinfo --name=ls1 /path/to/TLE.txt
 
 `tlegen`
 --------
+`tlegen` generates TLEs for simulation purposes.
+
+When used without arguments, it will generate a TLE with all default values,
+which is a sun-synchronous orbit with a 97.7° inclination and a mean motion (the
+number of revolutions per day) of 15:
+
+```
+tlegen
+```
+
+If you are curious to find out the altitude of such an orbit, simply use the 
+output directly with `sattrack`:
+```
+tlegen | sattrack --fields=A -
+```
+
+To set fields in the TLE to specific values, options such as `--inclination`,
+`--b-star` and `--epoch` can be used. Use `tlegen --help` for a comprehensive
+overview.
+
+There are also options to set TLE value indirectly. For example, a TLE does
+not contain an orbit's altitude directly, but an altitude of for example 1000km
+can be specified as follows:
+```
+tlegen --altitude=1000
+```
+This will calculate and set the values for mean motion (and eccentricity in case
+not one altitude, but a separate altitude at apogee and perigee, are specified)
+accordingly.
+
+Finally, there is an option to create a TLE that has the satellite arrive at a certain
+location at a certain time. This is a new feature and should be considered experimental -
+in particular, it does not go together well with some other options.
+It can be extremely useful for certain tests, however.
+
+The following example creates a TLE for a satellite that reaches Amsterdam on the
+3rd of July at noon, then uses `satpass` to verify that it does indeed:
+
+```
+tlegen --epoch=2022-07-03 --target-time=2022-07-03T12:00:00Z \
+    --target-location=$(termgen Amsterdam) |\
+    satpass --location=$(termgen Amsterdam) --start=2022-07-03T11:00:00Z -
+```
 
 
 
