@@ -29,10 +29,10 @@ build/%.o: src/%.c
 	gcc ${CFLAGS} -c $< -o $@
 
 build/cities.c: src/worldcities.csv src/othercities.csv
-	./generate-cities.pl $^ > $@
+	perl generate-cities.pl $^ > $@
 
 build/countries.c: src/countries.txt
-	./generate-countries.pl $^ > $@
+	perl generate-countries.pl $^ > $@
 
 clean:
 	rm -rf build bin
