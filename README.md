@@ -161,11 +161,45 @@ sattrack --name=ls2b --location=0,0 --start=2022-06-01T21:59:04Z \
 
 `termgen`
 ---------
+`termgen` generates the coordinates of named locations on earth (its name, 'terminal
+generator', refers to the ambition to be able to generate the locations of multiple
+terminals, for example a large number of terminals randomly distributed across a 
+country, for simulation purposes - it doesn't do that yet).
+
+It can be be used with either city as argument:
+```
+termgen Amsterdam
+```
+or a two-letter country-code:
+```
+termgen NL
+```
+In the latter case, it will generate the coordinates of the country's geographic
+center.
+
+As shown before, the output can be directly substituted in the `--location` option
+of `satpass` or `sattrack`:
+```
+satpass --location=$(termgen Capetown) /path/to/TLE.txt
+```
 
 `tleinfo`
 ---------
+`tleinfo` reads one or more TLEs from a file, and shows the contents in a human-readable
+format. If used like this:
+```
+tleinfo /path/to/TLE.txt
+```
+the data from all TLEs in the given file (which may also be `-` to read from `stdin`,
+or omitted to use the contents of `$ORBIT_TOOLS_TLE`) will be shown. 
+
+To show just the data from a specific satellite, use the `--name` option:
+```
+tleinfo --name=ls1 /path/to/TLE.txt
+```
 
 `tlegen`
 --------
+
 
 
