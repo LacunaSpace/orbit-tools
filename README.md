@@ -80,14 +80,16 @@ The following example will show the first 3 passes of the year 2022 of the ls2b 
 with an elevation of at least 30° in Amsterdam, and format the results as 'human readable'
 rows:
 ```
-satpass --location=52.3667,4.8833 --min-elevation=30 --name=ls2b --start=2022-01-01 --format=rows /path/to/TLE/tle
+satpass --location=52.3667,4.8833 --min-elevation=30 --name=ls2b \
+    --start=2022-01-01 --format=rows /path/to/TLE/tle
 ```
 
 The following example will do the same, but using `termgen` instead of location as coordinates
 (see `termgen` details), and only showing pass start and end, as UNIX timestamps, and formatted
 as columns:
 ```
-satpass --location=$(termgen Amsterdam) --min-elevation=30 --name=ls2b --start=2022-01-01 --format=cols --fields=SE /path/to/TLE/tle
+satpass --location=$(termgen Amsterdam) --min-elevation=30 --name=ls2b \
+    --start=2022-01-01 --format=cols --fields=SE /path/to/TLE/tle
 ```
 
 The following example will show the next pass of any of the satellites in the TLE file
