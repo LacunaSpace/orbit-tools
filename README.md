@@ -103,7 +103,7 @@ For a comprehensive overview of options, use `satpass --help`.
 
 `sattrack`
 ----------
-`sattrack` show the location of a satellite at a specified date and time. The
+`sattrack` shows the location of a satellite at a specified date and time. The
 simplest invocation of `sattrack` would be:
 ```
 sattrack --name=ls2b /path/to/TLE.txt
