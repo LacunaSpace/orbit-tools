@@ -1,3 +1,6 @@
+#define _XOPEN_SOURCE /* for strptime */
+#define _DEFAULT_SOURCE /* for timegm */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

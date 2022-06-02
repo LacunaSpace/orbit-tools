@@ -3,21 +3,22 @@ all: bin/tlegen bin/sattrack bin/satpass bin/tleinfo bin/termgen
 util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o build/observer.o build/util.o build/output.o
 
 CFLAGS=-Wall -Isrc
+LDFLAGS=-lm
 
 bin/tlegen: build/tlegen.o $(util)
-	gcc -o bin/tlegen ${CFLAGS} $^
+	gcc -o bin/tlegen $^ ${LDFLAGS}
 
 bin/sattrack: build/sattrack.o $(util)
-	gcc -o bin/sattrack ${CFLAGS} $^
+	gcc -o bin/sattrack $^ ${LDFLAGS}
 
 bin/satpass: build/satpass.o $(util)
-	gcc -o bin/satpass ${CFLAGS} $^
+	gcc -o bin/satpass $^ ${LDFLAGS}
 
 bin/tleinfo: build/tleinfo.o $(util)
-	gcc -o bin/tleinfo ${CFLAGS} $^
+	gcc -o bin/tleinfo $^ ${LDFLAGS}
 
 bin/termgen: build/termgen.o build/countries.o build/cities.o $(util)
-	gcc -o bin/termgen ${CFLAGS} $^
+	gcc -o bin/termgen $^ ${LDFLAGS}
 
 build/cities.o: build/cities.c
 	gcc ${CFLAGS} -c $< -o $@
