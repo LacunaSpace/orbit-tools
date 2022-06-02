@@ -18,6 +18,9 @@ Building
 Building requires gnu make, gcc and perl5. Simply type `make`, executables will be placed
 in the `bin` directory.
 
+The code has been tested on OS-X and Ubuntu Linux. It should compile and run with
+little or no modification on any POSIX compliant platform.
+
 Details
 =======
 Date and time format
@@ -244,5 +247,9 @@ tlegen --epoch=2022-07-03 --target-time=2022-07-03T12:00:00Z \
     satpass --location=$(termgen Amsterdam) --start=2022-07-03T11:00:00Z -
 ```
 
+About the code
+==============
+The SGP4 implementation was taken from https://github.com/aholinch/sgp4. The remainder
+of the code was added by Lacuna in 2022.
 
 
