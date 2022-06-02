@@ -16,7 +16,6 @@ void setValsToRec(TLE *tle, ElsetRec *rec);
  
 void parseLines(TLE *tle, char *line1, char *line2)
 {
-    int i=0;
     tle->rec.whichconst=wgs72;
     // copy the lines
     strncpy(tle->line1,line1,69);
@@ -147,7 +146,6 @@ long parseEpoch(ElsetRec *rec, char *str)
     strncpy(&tmp2[1],&tmp[5],9);
     tmp2[11]=0;
     double dfrac = strtod(tmp2,NULL);
-    double odfrac = dfrac;        
     rec->epochdays = doy;
     rec->epochdays += dfrac;
         
@@ -162,7 +160,6 @@ long parseEpoch(ElsetRec *rec, char *str)
 
         
     dfrac = 1000.0*(dfrac-sc);
-    int milli = (int)dfrac;
 
     double sec = ((double)sc)+dfrac/1000.0;
 

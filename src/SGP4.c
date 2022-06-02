@@ -240,13 +240,16 @@
                 rec->nodep = atan2(alfdp, betdp);
                 //  sgp4fix for afspc written intrinsic functions
                 // nodep used without a trigonometric function ahead
-                if ((rec->nodep < 0.0) && (opsmode == 'a'))
+                if ((rec->nodep < 0.0) && (opsmode == 'a')) {
                     rec->nodep = rec->nodep + twopi;
-                if (fabs(xnoh - rec->nodep) > pi)
-                    if (rec->nodep < xnoh)
+                }
+                if (fabs(xnoh - rec->nodep) > pi) {
+                    if (rec->nodep < xnoh) {
                         rec->nodep = rec->nodep + twopi;
-                    else
+                    } else {
                         rec->nodep = rec->nodep - twopi;
+                    }
+                }
                 rec->mp = rec->mp + pl;
                 rec->argpp = xls - rec->mp - cosip * rec->nodep;
             }
