@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     for(size_t l=0; l<nr_countries; l++) {
         if(!strcasecmp(argv[argc-1], countries[l].name) ||
            !strcmp(argv[argc-1], countries[l].country_code)) {
-            printf("%g,%g\n", countries[l].lon, countries[l].lat);
+            printf("%g,%g\n", countries[l].lat, countries[l].lon);
             exit(0);
         }
     }
