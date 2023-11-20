@@ -19,6 +19,12 @@ jobs:
         with:
           name: orbit-tools_${{ env.RELEASE_VERSION }}_arm64.deb
           path: orbit-tools_${{ env.RELEASE_VERSION }}_arm64.deb
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            infra/rooftop/*.deb
   amd64:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
@@ -33,3 +39,9 @@ jobs:
         with:
           name: orbit-tools_${{ env.RELEASE_VERSION }}_amd64.deb
           path: orbit-tools_${{ env.RELEASE_VERSION }}_amd64.deb
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            infra/rooftop/*.deb
