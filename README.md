@@ -53,7 +53,7 @@ ls2b
 The first line, containing the satellite name, is optional. The file may contain 
 one or more satellites. If it contains more than one satellite `satpass` will show
 the first pass of any of the satellites, unless one specific satellite is selected
-with the `--name=<NAME>` option.
+with the `--satellite-name=<NAME>` option.
 
 Instead of a filename, the special value `-` may also be used to use `stdin` as input.
 If no filename at all is specified, `satpass` will use the contents of environment
@@ -83,7 +83,7 @@ The following example will show the first 3 passes of the year 2022 of the ls2b 
 with an elevation of at least 30° in Amsterdam, and format the results as 'human readable'
 rows:
 ```
-satpass --location=52.3667,4.8833 --min-elevation=30 --name=ls2b \
+satpass --location=52.3667,4.8833 --min-elevation=30 --satellite-name=ls2b \
     --start=2022-01-01 --count=3 --format=rows /path/to/TLE/tle
 ```
 
@@ -91,7 +91,7 @@ The following example will do the same, but using `termgen` instead of location 
 (see `termgen` details), and only showing pass start and end, as UNIX timestamps, and formatted
 as columns:
 ```
-satpass --location=$(termgen Amsterdam) --min-elevation=30 --name=ls2b \
+satpass --location=$(termgen Amsterdam) --min-elevation=30 --satellite-name=ls2b \
     --start=2022-01-01 --count=3 --format=cols --fields=SE /path/to/TLE/tle
 ```
 
@@ -109,11 +109,11 @@ For a comprehensive overview of options, use `satpass --help`.
 `sattrack` shows the location of a satellite at a specified date and time. The
 simplest invocation of `sattrack` would be:
 ```
-sattrack --name=ls2b /path/to/TLE.txt
+sattrack --satellite-name=ls2b /path/to/TLE.txt
 ```
 Like `satpass`, this will read TLES from the file `/path/to/TLE.txt` - however,
 if this file contains more than one TLE, and no satellite name is specified with
-the `--name` option, the first TLE from the file will be used. Again, `-` can be
+the `--satellite-name` option, the first TLE from the file will be used. Again, `-` can be
 used as filename to read from `stdin`, and if no filename at all is given, 
 `$ORBIT_TOOLS_TLE` will be consulted.
 
@@ -124,7 +124,7 @@ When not only the satellite's own location, but also its visibility from a certa
 location is required, specify that location with the `--location` switch:
 
 ```
-sattrack --name=ls2b --location=52.3667,4.8833 /path/to/TLE.txt
+sattrack --satellite-name=ls2b --location=52.3667,4.8833 /path/to/TLE.txt
 ```
 
 To make a real-time display of this, use (this uses `termgen` again instead
@@ -132,7 +132,7 @@ of specifying the location's coordinates directly):
 ```
 while [ 1 ]; do
     clear
-    sattrack --name=ls2b --location=$(termgen Amsterdam) /path/to/TLE.txt
+    sattrack --satellite-name=ls2b --location=$(termgen Amsterdam) /path/to/TLE.txt
     sleep 1
 done
 ```
@@ -156,7 +156,7 @@ the 1st of June 2022 (note that the `--location=0,0` option could have omitted i
 this case since it's the default):
 
 ```
-sattrack --name=ls2b --location=0,0 --start=2022-06-01T21:59:04Z \
+sattrack --satellite-name=ls2b --location=0,0 --start=2022-06-01T21:59:04Z \
     --interval=10 --count=60 -fields=Tl |\
     gnuplot -p -e "plot '-' using 1:2"  
 ```
@@ -196,9 +196,9 @@ tleinfo /path/to/TLE.txt
 the data from all TLEs in the given file (which may also be `-` to read from `stdin`,
 or omitted to use the contents of `$ORBIT_TOOLS_TLE`) will be shown. 
 
-To show just the data from a specific satellite, use the `--name` option:
+To show just the data from a specific satellite, use the `--satellite-name` option:
 ```
-tleinfo --name=ls1 /path/to/TLE.txt
+tleinfo --satellite-name=ls1 /path/to/TLE.txt
 ```
 
 `tlegen`
