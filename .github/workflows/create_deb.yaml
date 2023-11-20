@@ -18,7 +18,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: orbit-tools_${{ env.RELEASE_VERSION }}_arm64.deb
-          path: orbit-tools_${{ env.RELEASE_VERSION }}_arm64.deb
+          path: build/orbit-tools_${{ env.RELEASE_VERSION }}_arm64.deb
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -38,7 +38,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: orbit-tools_${{ env.RELEASE_VERSION }}_amd64.deb
-          path: orbit-tools_${{ env.RELEASE_VERSION }}_amd64.deb
+          path: build/orbit-tools_${{ env.RELEASE_VERSION }}_amd64.deb
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
