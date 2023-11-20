@@ -28,10 +28,10 @@ int main(int argc, char *argv[]) {
     executable = argv[0];
 
     struct option longopts[] = {
-        { "--help", no_argument, NULL, 'h' },
-        { "--list", no_argument, NULL, 'l' },
-        { "--cities", no_argument, NULL, 'c' },
-        { "--countries", no_argument, NULL, 'C' },
+        { "help", no_argument, NULL, 'h' },
+        { "list", no_argument, NULL, 'l' },
+        { "cities", no_argument, NULL, 'c' },
+        { "countries", no_argument, NULL, 'C' },
         { NULL }
     };
 
