@@ -31,12 +31,17 @@ static void usage(void) {
     printf("-e,--min-elevation=<ELEVATION> : Find only passes with a best elevation of at\n");
     printf("                                 least <ELEVATION> degrees. The default is 0.\n");
     printf("-c,--count=<COUNT>             : Stop after finding <COUNT> passes. The default\n");
-    printf("                                 is 1.\n");
+    printf("                                 is 1 if no end-date is specified with --end,\n");
+    printf("                                 otherwise there is no limit.\n");
     printf("-s,--start=<START>             : Start searching at the specified start-date and\n");
     printf("                                 -time, specified as yyyy-mm-ddThh:mm:ssZ. The\n");
     printf("                                 default is the current date and time. Alternatively\n");
     printf("                                 the start-date can be specified as just yyyy-mm-dd,\n");
     printf("                                 which is short for yyyy-mm-ddT00:00:00Z\n");
+    printf("-E,--end=<END>                 : Stop searching at the specified end-date and -time,\n");
+    printf("                                 specified as yyyy-mm-ddThh:mm:ssZ. By default, there\n");
+    printf("                                 is no end-date, and the number of passes is determined\n");
+    printf("                                 but the --count option.\n");
     printf("-f,--format=rows|cols          : Sets the output format. When not specified, rows\n");
     printf("                                 is used when count is 1, otherwise cols\n");
     printf("-F,--fields=<FIELDS>           : Specifies the fields to include in the output.\n");
@@ -102,6 +107,7 @@ int main(int argc, char *argv[]) {
         { "min-elevation", required_argument, NULL, 'e' },
         { "count", required_argument, NULL, 'c' },
         { "start", required_argument, NULL, 's' },
+        { "end", required_argument, NULL, 'E' },
         { "format", required_argument, NULL, 'f' },
         { "fields", required_argument, NULL, 'F' },
         { "headers", no_argument, NULL, 'H' },
@@ -118,7 +124,11 @@ int main(int argc, char *argv[]) {
     struct timeval start;
     gettimeofday(&start, 0);
     start.tv_usec = 0;
+    struct timeval end;
+    end.tv_usec = 0;
+    int has_end = 0;
     int count = 1;
+    int has_count = 0;
     char *sat_name = NULL;
     int min_elevation = 0;
     char *selector = NULL;
@@ -131,7 +141,7 @@ int main(int argc, char *argv[]) {
         fmt_rows
     } fmt = fmt_auto;
 
-    while((c = getopt_long(argc, argv, "hl:n:e:c:s:f:F:Hg:", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hl:n:e:c:s:E:f:F:Hg:", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -151,10 +161,16 @@ int main(int argc, char *argv[]) {
             case 'c':
                 if(optarg_as_int(&count, 1, INT_MAX))
                     usage_error("Invalid count");
+                has_count = 1;
                 break;
             case 's':
                 if(optarg_as_datetime_extended(&start.tv_sec))
                     usage_error("Invalid start");
+                break;
+            case 'E':
+                if(optarg_as_datetime_extended(&end.tv_sec))
+                    usage_error("Invalid end");
+                has_end = 1;
                 break;
             case 'f':
                 if(string_starts_with("rows", optarg)) fmt = fmt_rows;
@@ -213,7 +229,7 @@ int main(int argc, char *argv[]) {
         scanners[l].in_pass = 0;
     }
 
-    if(fmt == fmt_auto) fmt = count > 1 ? fmt_cols : fmt_rows;
+    if(fmt == fmt_auto) fmt = has_count | has_end ? fmt_cols : fmt_rows;
 
     if(!selector) selector = "ndstel";
 
@@ -223,7 +239,9 @@ int main(int argc, char *argv[]) {
 
     size_t pass_count = 0;
     long long int keep_going = give_up_after * 60 * 60;
-    while(pass_count < count && keep_going) {
+    while((pass_count < count || (has_end && !has_count)) && 
+          (!has_end || start.tv_sec < end.tv_sec) &&
+           keep_going) {
         observation result;
         for(size_t l=0; l<nr_sats; l++) {
             observe(&obs, &result, scanners[l].tle, start.tv_sec);
