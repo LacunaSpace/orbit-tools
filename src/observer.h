@@ -15,6 +15,7 @@ typedef struct {
     double azimuth;
     double ssp_lon, ssp_lat;
     double altitude;
+    double sat_eci[3];
 } observation;
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when);

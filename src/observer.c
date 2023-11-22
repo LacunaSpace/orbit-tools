@@ -1,5 +1,6 @@
 #include "observer.h"
 #include <math.h>
+#include <string.h>
 
 #define WGS84_A (6378.137) /* In km */
 #define WGS84_E_SQUARED (6.69437999014E-3)
@@ -90,6 +91,7 @@ void observe(observer *obs, observation *o, TLE *tle, time_t when) {
        velocity, which we don't use for now */
     double sat_eci[3], v[3];
     getRVForDate(tle, when * 1000, sat_eci, v);
+    memcpy(o->sat_eci, sat_eci, sizeof sat_eci);
 
     /* We have the observer's location in lon/lat/alt, convert this first
        to ECEF then to ECI */

@@ -47,6 +47,9 @@ static void usage(void) {
     printf("                             o: The longitude of the sub-satellite point, in degrees\n");
     printf("                             a: The latitude of the sub-satellite point, in degrees\n");
     printf("                             A: The satellite altitude, in kilometers\n");
+    printf("                             X: The ECI x coordinate, in kilometers\n");
+    printf("                             Y: The ECI y coordinate, in kilometers\n");
+    printf("                             Z: The ECI z coordinate, in kilometers\n");
     printf("                             The default is trezoaA when a location is specified,\n");
     printf("                             toaA when no location is specified.\n");
     printf("\n");
@@ -69,6 +72,9 @@ static field fields[] = {
     { "SSP Longitude", "ssp_lon", 'o', fld_type_double },
     { "SSP Latitude", "ssp_lat", 'a', fld_type_double },
     { "Altitude", "altitude", 'A', fld_type_double },
+    { "ECI X", "eci_x", 'X', fld_type_double },
+    { "ECI Y", "eci_y", 'Y', fld_type_double },
+    { "ECI Z", "eci_z", 'Z', fld_type_double },
     { NULL }
 };    
 
@@ -186,6 +192,9 @@ int main(int argc, char *argv[]) {
         values[5].value.double_value = result.ssp_lon;
         values[6].value.double_value = result.ssp_lat;
         values[7].value.double_value = result.altitude;
+        values[8].value.double_value = result.sat_eci[0];
+        values[9].value.double_value = result.sat_eci[1];
+        values[10].value.double_value = result.sat_eci[2];
         render(l, fields, values, selector, fmt == fmt_rows);
 
         start.tv_sec += interval;
