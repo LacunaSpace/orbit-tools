@@ -12,7 +12,7 @@ ARG ARCHITECTURE
 
 WORKDIR /buildroot
 RUN make clean
-RUN if [ "$ARCHITECTURE" = "arm64" ] ; then make CC="aarch64-linux-gnu-gcc -static" ; else make CC=gcc ; fi
+RUN if [ "$ARCHITECTURE" = "arm64" ] ; then make CC="aarch64-linux-gnu-gcc -static" version=${VERSION} ; else make CC=gcc version=${VERSION} ; fi
 
 RUN mkdir -p package/usr/bin
 RUN cp -r bin package/usr
