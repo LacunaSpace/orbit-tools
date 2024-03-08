@@ -12,6 +12,7 @@
 #include "observer.h"
 #include "util.h"
 #include "output.h"
+#include "version.h"
 
 static char *executable;
 
@@ -20,6 +21,7 @@ static void usage(void) {
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help                  : show this help and exit.\n");
+    printf("-V,--version               : print version and exit.\n");
     printf("-l,--location=<LAT,LON>    : specify the location on the ground, in degrees.\n");
     printf("                             The default is 0,0.\n");
     printf("-s,--start=<TIMESTAMP>     : specify the date and time at which to start the,\n");
@@ -84,6 +86,7 @@ int main(int argc, char *argv[]) {
     int c;
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
+        { "version", no_argument, NULL, 'V' },
         { "location", required_argument, NULL, 'l' },
         { "start", required_argument, NULL, 's' },
         { "count", required_argument, NULL, 'c' },
@@ -107,10 +110,13 @@ int main(int argc, char *argv[]) {
     enum { fmt_auto, fmt_rows, fmt_cols } fmt = fmt_auto;
     char *selector = NULL;
     int headers = 0;
-    while((c = getopt_long(argc, argv, "hl:s:c:i:n:f:F:H", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hVl:s:c:i:n:f:F:H", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
+                exit(0);
+            case 'V':
+                printf("%s\n", VERSION);
                 exit(0);
             case 'l':
                 if(optarg_as_lon_lat(&obs.lon, &obs.lat))

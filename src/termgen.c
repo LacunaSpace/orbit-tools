@@ -4,6 +4,7 @@
 #include <sysexits.h>
 #include <string.h>
 #include "geo.h"
+#include "version.h"
 
 static char *executable;
 
@@ -15,6 +16,7 @@ static void usage(void) {
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help        : Print this help and exit\n");
+    printf("-V,--version     : Print version and exit\n");
     printf("-c,--cities      : Use only cities\n");
     printf("-C,--countries   : Use only countries\n");
     printf("-l,--list        : List cities and countries\n");
@@ -29,6 +31,7 @@ int main(int argc, char *argv[]) {
 
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
+        { "version", no_argument, NULL, 'V' },
         { "list", no_argument, NULL, 'l' },
         { "cities", no_argument, NULL, 'c' },
         { "countries", no_argument, NULL, 'C' },
@@ -41,10 +44,13 @@ int main(int argc, char *argv[]) {
 
     opterr = 0;
     int c;
-    while((c = getopt_long(argc, argv, "hlcC", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hVlcC", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
+                exit(0);
+            case 'V':
+                printf("%s\n", VERSION);
                 exit(0);
             case 'l':
                 list = 1;

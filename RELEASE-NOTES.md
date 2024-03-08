@@ -2,6 +2,7 @@ Next
 ====
 * Add ECI X, Y and Z to `satpass` output fields
 * Make `tleinfo` output configurable with fields-string
+* Add `--version` option to all commands
 
 1.0.0
 =====

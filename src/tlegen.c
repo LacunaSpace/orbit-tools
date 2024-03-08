@@ -13,6 +13,7 @@
 #include "tledata.h"
 #include "observer.h"
 #include "TLE.h"
+#include "version.h"
 
 #define EARTH_RADIUS (6371.0)
 #define MAX_RADIUS (100000.0)
@@ -50,6 +51,7 @@ static void usage(void) {
     printf("General options:\n");
     printf("\n");
     printf("-h,--help                        : Print this help and exit.\n");
+    printf("-V,--version                     : Print version and exit.\n");
     printf("-n,--name=NAME                   : Set the satellite name. The default is %s\n", DEFAULT_NAME);
     printf("-l,--lines=2|3                   : Set the format to 2 or 3 lines. When set\n");
     printf("                                   to 3 lines, the first line contains the\n");
@@ -228,6 +230,7 @@ int main(int argc, char *argv[]) {
     
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
+        { "version", no_argument, NULL, 'V' },
         { "name", required_argument, NULL, 'n' },
         { "lines", required_argument, NULL, 'l' },
         { "minimum-eccentricity", required_argument, NULL, OPT_MINIMUM_ECCENTRICITY },
@@ -258,13 +261,16 @@ int main(int argc, char *argv[]) {
         { NULL }
     };
 
-    char optstring[] = "+ho:n:l:e:b:B:i:r:E:p:m:M:a:";
+    char optstring[] = "+hVo:n:l:e:b:B:i:r:E:p:m:M:a:";
     int c;
     opterr = 0;
     while((c = getopt_long(argc, argv, optstring, longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
+                exit(0);
+            case 'V':
+                printf("%s\n", VERSION);
                 exit(0);
             case 'o':
                 free(output);

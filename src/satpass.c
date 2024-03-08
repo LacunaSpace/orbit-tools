@@ -11,6 +11,7 @@
 #include "observer.h"
 #include "util.h"
 #include "output.h"
+#include "version.h"
 
 static char *executable;
 
@@ -23,6 +24,7 @@ static void usage(void) {
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help                      : Print this help and exit\n");
+    printf("-V,--version                   : Print version and exit\n");
     printf("-l,--location=<LAT,LON>        : Specify the location on the ground, in degrees.\n");
     printf("                                 The default is 0,0.\n");
     printf("-n,--satellite-name=<NAME>     : Find passes for the named satellite. When\n");
@@ -102,6 +104,7 @@ int main(int argc, char *argv[]) {
 
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
+        { "version", no_argument, NULL, 'V' },
         { "location", required_argument, NULL, 'l' },
         { "satellite-name", required_argument, NULL, 'n' },
         { "min-elevation", required_argument, NULL, 'e' },
@@ -141,10 +144,13 @@ int main(int argc, char *argv[]) {
         fmt_rows
     } fmt = fmt_auto;
 
-    while((c = getopt_long(argc, argv, "hl:n:e:c:s:E:f:F:Hg:", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hVl:n:e:c:s:E:f:F:Hg:", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
+                exit(0);
+            case 'V':
+                printf("%s\n", VERSION);
                 exit(0);
             case 'l':
                 if(optarg_as_lon_lat(&obs.lon, &obs.lat))

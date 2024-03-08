@@ -2,7 +2,9 @@ all: bin/tlegen bin/sattrack bin/satpass bin/tleinfo bin/termgen
 
 util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o build/observer.o build/util.o build/output.o
 
-CFLAGS=-Wall -Isrc
+version:=$(shell git describe --tags --always)
+
+CFLAGS=-Wall -Isrc -DVERSION=\"$(version)\"
 LDFLAGS=-lm
 
 bin/tlegen: build/tlegen.o $(util)

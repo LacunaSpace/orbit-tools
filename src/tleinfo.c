@@ -7,6 +7,7 @@
 #include "tle_loader.h"
 #include "output.h"
 #include "util.h"
+#include "version.h"
 
 #define DEFAULT_SELECTOR "nie12BIRxpamN"
 
@@ -22,6 +23,7 @@ void usage(void) {
     printf("\n");
     printf("Options are:\n");
     printf("-h,--help                 : show this help and exit\n");
+    printf("-V,--version              : show version and exit\n");
     printf("-n,--satelite-name=<NAME> : the name of the satellite of\n");
     printf("                            which to show information. The\n");
     printf("                            default is to show information about\n");
@@ -98,7 +100,11 @@ int main(int argc, char *argv[]) {
 
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
+        { "version", no_argument, NULL, 'V' },
         { "satellite-name", required_argument, NULL, 'n' },
+        { "format", required_argument, NULL, 'f' },
+        { "headers", no_argument, NULL, 'H' },
+        { "fields", required_argument, NULL, 'F' },
         { NULL }
     };
 
@@ -109,10 +115,13 @@ int main(int argc, char *argv[]) {
     int rows = 1;
     char *selector = NULL;
     
-    while((c = getopt_long(argc, argv, "hn:f:HF:", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hVn:f:HF:", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
+                exit(0);
+            case 'V':
+                printf("%s\n", VERSION);
                 exit(0);
             case 'n':
                 free(sat_name);
