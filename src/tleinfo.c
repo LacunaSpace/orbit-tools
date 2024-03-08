@@ -5,6 +5,10 @@
 #include <string.h>
 #include <time.h>
 #include "tle_loader.h"
+#include "output.h"
+#include "util.h"
+
+#define DEFAULT_SELECTOR "nie12BIRxpamN"
 
 static char *executable;
 
@@ -22,6 +26,28 @@ void usage(void) {
     printf("                            which to show information. The\n");
     printf("                            default is to show information about\n");
     printf("                            all satellites in the file\n");
+    printf("-f,--format=FORMAT        : Set the format to either `rows` or\n");
+    printf("                            `cols`. The default is `rows`.\n");
+    printf("-H,--headers              : When the format is cols, first print\n");
+    printf("                            a row with headers.\n");
+    printf("-F,--fields=FIELDS        : Specifies the fields to include in the\n");
+    printf("                            outputs. FIELDS is a string consisting\n");
+    printf("                            of:\n");
+    printf("                            n: Name of the satellite\n");
+    printf("                            i: Object ID of the satellite\n");
+    printf("                            e: TLE epoch, as yyyy-mm-ddThh:mm:ssZ\n");
+    printf("                            E: TLE epoch, as seconds since UNIX epoch\n");
+    printf("                            1: First derivative of mean motion (ndot)\n");
+    printf("                            2: Second derivative of mean motion\n");
+    printf("                            B: B*\n");
+    printf("                            I: Inclination\n");
+    printf("                            R: RAAN\n");
+    printf("                            x: Eccentricity\n");
+    printf("                            p: Argument of perigee\n");
+    printf("                            a: Mean anomaly\n");
+    printf("                            m: Mean motion\n");
+    printf("                            N: Rev number\n");
+    printf("                            The default is %s\n", DEFAULT_SELECTOR);
 }
 
 static void usage_error(char *msg) {
@@ -29,24 +55,42 @@ static void usage_error(char *msg) {
     exit(EX_USAGE);
 }
 
-static void print(char *name, TLE *tle) {
-    time_t t = tle->epoch/1000;
-    struct tm *fmt = gmtime(&t);
-    fprintf(stdout, "Name                                : %s\n", name ? name : "<no name>");
-    fprintf(stdout, "Object ID                           : %s\n", tle->objectID);
-    fprintf(stdout, "Epoch                               : %04d-%02d-%02dT%02d:%02d:%02dZ\n",
-                    fmt->tm_year + 1900, fmt->tm_mon+1, fmt->tm_mday,
-                    fmt->tm_hour, fmt->tm_min, fmt->tm_sec);
-    fprintf(stdout, "1st derivative of mean motion (ndot): %g\n", tle->ndot);
-    fprintf(stdout, "2nd derivative of mean motion       : %g\n", tle->nddot);
-    fprintf(stdout, "B*                                  : %g\n", tle->bstar);
-    fprintf(stdout, "Inclination                         : %g\n", tle->incDeg);
-    fprintf(stdout, "RAAN                                : %g\n", tle->raanDeg);
-    fprintf(stdout, "Eccentricity                        : %g\n", tle->ecc);
-    fprintf(stdout, "Argument of perigee                 : %g\n", tle->argpDeg);
-    fprintf(stdout, "Mean anomaly                        : %g\n", tle->maDeg);
-    fprintf(stdout, "Mean motion                         : %g\n", tle->n);
-    fprintf(stdout, "Rev num                             : %d\n", tle->revnum);
+
+static field fields[] = {
+    { "Name", "name", 'n', fld_type_string },
+    { "Object ID", "object_id", 'i', fld_type_string },
+    { "Epoch", "epoch", 'e', fld_type_time_string },
+    { "Epoch", "epoch", 'E', fld_type_time },
+    { "First derivative of mean motion (n dot)", "1st_deriv_mean_motion", '1', fld_type_double },
+    { "Second derivative of mean motion", "2nd_deriv_mean_motion", '2', fld_type_double },
+    { "B*", "b_star", 'B', fld_type_double },
+    { "Inclination", "inclination", 'I', fld_type_double },
+    { "RAAN", "raan", 'R', fld_type_double },
+    { "Eccentricity", "eccentricity", 'x', fld_type_double },
+    { "Argument of perigee", "arg_of_perigee", 'p', fld_type_double },
+    { "Mean anomaly", "mean_anomaly", 'a', fld_type_double },
+    { "Mean motion", "mean_motion", 'm', fld_type_double },
+    { "Rev number", "rev_number", 'N', fld_type_int },
+    { NULL }
+};
+
+static void print(int x, const char *name, const TLE *tle, const char *selector, int rows) {
+    field_value values[sizeof fields / sizeof fields[0] - 1];
+    values[0].value.string_value = name ? name : "<no name>";
+    values[1].value.string_value = tle->objectID;
+    values[2].value.time_value = tle->epoch/1000;
+    values[3].value.time_value = tle->epoch/1000;
+    values[4].value.double_value = tle->ndot;
+    values[5].value.double_value = tle->nddot;
+    values[6].value.double_value = tle->bstar;
+    values[7].value.double_value = tle->incDeg;
+    values[8].value.double_value = tle->raanDeg;
+    values[9].value.double_value = tle->ecc;
+    values[10].value.double_value = tle->argpDeg;
+    values[11].value.double_value = tle->maDeg;
+    values[12].value.double_value = tle->n;
+    values[13].value.int_value = tle->revnum;
+    render(x, fields, values, selector, rows);
 }
 
 int main(int argc, char *argv[]) {
@@ -61,7 +105,11 @@ int main(int argc, char *argv[]) {
     opterr = 0;
     int c;
     char *sat_name = NULL;
-    while((c = getopt_long(argc, argv, "hn:", longopts, NULL)) != -1) {
+    int headers = 0;
+    int rows = 1;
+    char *selector = NULL;
+    
+    while((c = getopt_long(argc, argv, "hn:f:HF:", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -69,6 +117,23 @@ int main(int argc, char *argv[]) {
             case 'n':
                 free(sat_name);
                 sat_name = strdup(optarg);
+                break;
+            case 'H':
+                headers = 1;
+                break;
+            case 'f':
+                if(string_starts_with("cols", optarg)) rows = 0;
+                else if(string_starts_with("rows", optarg)) rows = 1;
+                else usage_error("Invalid format");
+                break;
+            case 'F':
+                if(check_selector(fields, optarg))
+                    usage_error("Invalid fields-string");
+                free(selector);
+                selector = strdup(optarg);
+                break;
+            default:
+                usage_error("Invalid option");
                 break;
         }
     }
@@ -78,8 +143,12 @@ int main(int argc, char *argv[]) {
     else if(optind == argc && getenv("ORBIT_TOOLS_TLE")) file = getenv("ORBIT_TOOLS_TLE");
     else usage_error("either supply a filename or set $ORBIT_TOOLS_TLE");
 
+    if(!selector) selector = DEFAULT_SELECTOR;
+
     loaded_tle *lt = load_tles_from_filename(file);
     if(!lt) usage_error("Failed to load file");
+
+    if(!rows && headers) render_headers(fields, selector);
 
     if(sat_name) {
         loaded_tle *target = get_tle_by_name(lt, sat_name);
@@ -87,11 +156,11 @@ int main(int argc, char *argv[]) {
             unload_tles(lt);
             usage_error("Satellite not found");
         }
-        print(target->name, &target->tle);
+        print(0, target->name, &target->tle, selector, rows);
     } else {
+        int l=0;
         for(loaded_tle *target = lt; target; target=target->next) {
-            print(target->name, &target->tle);
-            if(target->next) fprintf(stdout, "----------------------------------------------------------\n");
+            print(l++, target->name, &target->tle, selector, rows);
         }
     }
 
