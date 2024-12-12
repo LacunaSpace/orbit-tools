@@ -88,9 +88,9 @@ static void cross_product(double a[3], double b[3], double result[3]) {
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when) {
     /* Get the location of the satellite in ECI. This also gives us the satellite's 
-       velocity, which we don't use for now */
-    double sat_eci[3], v[3];
-    getRVForDate(tle, when * 1000, sat_eci, v);
+       velocity */
+    double sat_eci[3], sat_velocity_eci[3];
+    getRVForDate(tle, when * 1000, sat_eci, sat_velocity_eci);
     memcpy(o->sat_eci, sat_eci, sizeof sat_eci);
 
     /* We have the observer's location in lon/lat/alt, convert this first
@@ -184,4 +184,8 @@ void observe(observer *obs, observation *o, TLE *tle, time_t when) {
     double ssp_ecef[3];
     lla_to_ecef(o->ssp_lon, o->ssp_lat, 0, ssp_ecef);
     o->altitude = vec3_len(sat_ecef) - vec3_len(ssp_ecef);
+
+    /* Now for the velocity */
+    memcpy(o->sat_velocity_eci, sat_velocity_eci, sizeof sat_velocity_eci);
+    o->velocity = vec3_len(sat_velocity_eci);
 }

@@ -1,3 +1,7 @@
+Next
+====
+* Add velocity fields to `sattrack` 
+
 1.1.0
 =====
 * Add ECI X, Y and Z to `satpass` output fields

@@ -16,6 +16,8 @@ typedef struct {
     double ssp_lon, ssp_lat;
     double altitude;
     double sat_eci[3];
+    double velocity;
+    double sat_velocity_eci[3];
 } observation;
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when);

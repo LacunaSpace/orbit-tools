@@ -43,15 +43,22 @@ static void usage(void) {
     printf("                             following characters:\n");
     printf("                             t: The date and time, formatted\n");
     printf("                             T: The date and time, in seconds since the epoch\n");
-    printf("                             r: The range, in kilometers\n");
+    printf("                             r: The range, in km\n");
     printf("                             l: The elevation, in degrees\n");
     printf("                             z: The azimuth, in degrees\n");
     printf("                             o: The longitude of the sub-satellite point, in degrees\n");
     printf("                             a: The latitude of the sub-satellite point, in degrees\n");
-    printf("                             A: The satellite altitude, in kilometers\n");
-    printf("                             X: The ECI x coordinate, in kilometers\n");
-    printf("                             Y: The ECI y coordinate, in kilometers\n");
-    printf("                             Z: The ECI z coordinate, in kilometers\n");
+    printf("                             A: The satellite altitude, in km\n");
+    printf("                             X: The ECI x coordinate, in km\n");
+    printf("                             Y: The ECI y coordinate, in km\n");
+    printf("                             Z: The ECI z coordinate, in km\n");
+    printf("                             V: The satellite's velocity, in km/s\n");
+    printf("                             1: x component of the satellite's velocity the ECI reference frame,\n");
+    printf("                                in km/s\n");
+    printf("                             2: y component of the satellite's velocity the ECI reference frame,\n");
+    printf("                                in km/s\n");
+    printf("                             3: z component of the satellite's velocity the ECI reference frame,\n");
+    printf("                                in km/s\n");
     printf("                             The default is trezoaA when a location is specified,\n");
     printf("                             toaA when no location is specified.\n");
     printf("\n");
@@ -77,6 +84,10 @@ static field fields[] = {
     { "ECI X", "eci_x", 'X', fld_type_double },
     { "ECI Y", "eci_y", 'Y', fld_type_double },
     { "ECI Z", "eci_z", 'Z', fld_type_double },
+    { "Velocity", "velocity", 'V', fld_type_double },
+    { "Velocity ECI X", "velocity_eci_x", '1', fld_type_double },
+    { "Velocity ECI Y", "velocity_eci_y", '2', fld_type_double },
+    { "Velocity ECI Z", "velocity_eci_z", '3', fld_type_double },
     { NULL }
 };    
 
@@ -201,6 +212,10 @@ int main(int argc, char *argv[]) {
         values[8].value.double_value = result.sat_eci[0];
         values[9].value.double_value = result.sat_eci[1];
         values[10].value.double_value = result.sat_eci[2];
+        values[11].value.double_value = result.velocity;
+        values[12].value.double_value = result.sat_velocity_eci[0];
+        values[13].value.double_value = result.sat_velocity_eci[1];
+        values[14].value.double_value = result.sat_velocity_eci[2];
         render(l, fields, values, selector, fmt == fmt_rows);
 
         start.tv_sec += interval;
