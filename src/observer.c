@@ -1,6 +1,8 @@
 #include "observer.h"
+#include "debug.h"
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 
 #define WGS84_A (6378.137) /* In km */
 #define WGS84_E_SQUARED (6.69437999014E-3)
@@ -87,10 +89,15 @@ static void cross_product(double a[3], double b[3], double result[3]) {
 }
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when) {
+    /* Rotational axis of the earth pointing north, needed in various places */
+    double rot_axis[3] = { 0.0, 0.0, 1.0 };
+
     /* Get the location of the satellite in ECI. This also gives us the satellite's 
        velocity */
     double sat_eci[3], sat_velocity_eci[3];
     getRVForDate(tle, when * 1000, sat_eci, sat_velocity_eci);
+
+    /* Now first populate all the position-related fields */
     memcpy(o->sat_eci, sat_eci, sizeof sat_eci);
 
     /* We have the observer's location in lon/lat/alt, convert this first
@@ -147,7 +154,7 @@ void observe(observer *obs, observation *o, TLE *tle, time_t when) {
        vector, we first compute a vector pointing east from the observer. This vector is 
        perpendicular to both obs_eci and to the earth rotational axis, so we can get it
        using the cross product */
-    double down[3], rot_axis[3] = { 0, 0, 1.0 }, east[3];
+    double down[3], east[3];
     vec3_scalar_mult(obs_eci_norm, -1.0, down);
     cross_product(down, rot_axis, east);
     double east_norm[3];
@@ -185,7 +192,62 @@ void observe(observer *obs, observation *o, TLE *tle, time_t when) {
     lla_to_ecef(o->ssp_lon, o->ssp_lat, 0, ssp_ecef);
     o->altitude = vec3_len(sat_ecef) - vec3_len(ssp_ecef);
 
-    /* Now for the velocity */
+    /* Now populate the velocity-related fields */
     memcpy(o->sat_velocity_eci, sat_velocity_eci, sizeof sat_velocity_eci);
     o->velocity = vec3_len(sat_velocity_eci);
+
+    /* To calculate the ground-track velocity, we project the satellite's velocity (in ECEF)
+       on the plane tangential to the SSP (which we already have in ECEF). For a circular orbit,
+       the ground-track velocity is equal to the satellite's velocity, but for an elliptical
+       orbit it may be different. */
+    double sat_velocity_ecef[3];
+    eci_to_ecef(sat_velocity_eci, (double)when, sat_velocity_ecef);
+
+    DEBUG("sat_velocity_eci=(%g, %g, %g)", sat_velocity_eci[0], sat_velocity_eci[1], sat_velocity_eci[2]);
+    DEBUG("sat_velocity_ecef=(%g, %g, %g)", sat_velocity_ecef[0], sat_velocity_ecef[1], sat_velocity_ecef[2]);
+
+    double ssp_ecef_norm[3];
+    vec3_norm(ssp_ecef, ssp_ecef_norm);
+    DEBUG("ssp_ecef=(%g, %g, %g)", ssp_ecef[0], ssp_ecef[1], ssp_ecef[2]);
+    DEBUG("ssp_ecef_norm=(%g, %g, %g)", ssp_ecef_norm[0], ssp_ecef_norm[1], ssp_ecef_norm[2]);
+    double i = dot_product(sat_velocity_ecef, ssp_ecef_norm);
+    DEBUG("i=%g", i);
+    /* i tells us how much of the velocity vector is parallel with the SSP vector. If
+       we subtract this portion from the velocity vector, what remains is the velocity
+       in the plane tangential to the SSP. */
+    double groundtrack_velocity[] = {
+        sat_velocity_ecef[0] - i * ssp_ecef_norm[0],
+        sat_velocity_ecef[1] - i * ssp_ecef_norm[1],
+        sat_velocity_ecef[2] - i * ssp_ecef_norm[2]
+    };
+    DEBUG("groundtrack_velocity=(%g, %g, %g)", groundtrack_velocity[0], groundtrack_velocity[1], groundtrack_velocity[2]);
+    o->groundtrack_velocity = vec3_len(groundtrack_velocity);
+
+    /* Now calculate the ground-track direction - this is the azimuth of the groundtrack-velocity on
+       the plan tangential to the earth surface at the SSP.
+       This is done by first calculating the vector pointing "east" from the SSP (which is perpendicular
+       to both the SSP and the north pole) */
+    double ssp_east[3], ssp_down[3], ssp_north[3];
+    cross_product(ssp_ecef, rot_axis, ssp_east);
+    vec3_scalar_mult(ssp_ecef, -1.0, ssp_down);
+    cross_product(ssp_east, ssp_down, ssp_north);
+
+    double groundtrack_velocity_norm[3], ssp_east_norm[3], ssp_north_norm[3];
+    vec3_norm(groundtrack_velocity, groundtrack_velocity_norm);
+    vec3_norm(ssp_east, ssp_east_norm);
+    vec3_norm(ssp_north, ssp_north_norm);
+    DEBUG("groundtrack_velocity_norm=(%g, %g, %g)", groundtrack_velocity_norm[0], groundtrack_velocity_norm[1], groundtrack_velocity_norm[2]);
+    DEBUG("ssp_east_norm=(%g, %g, %g)", ssp_east_norm[0], ssp_east_norm[1], ssp_east_norm[2]);
+    DEBUG("ssp_north_norm=(%g, %g, %g)", ssp_north_norm[0], ssp_north_norm[1], ssp_north_norm[2]);
+
+    double cos_gt_velo_north = dot_product(groundtrack_velocity_norm, ssp_north_norm);
+    double cos_gt_velo_east = dot_product(groundtrack_velocity_norm, ssp_east_norm);
+    double angle_gt_velo_north = acos(cos_gt_velo_north);
+    double angle_gt_velo_east = acos(cos_gt_velo_east);
+    double groundtrack_dir = angle_gt_velo_east < M_PI/2.0 ? angle_gt_velo_north : 2.0 * M_PI - angle_gt_velo_north;
+    groundtrack_dir += M_PI;
+    if(groundtrack_dir >= M_PI * 2.0)
+        groundtrack_dir -= M_PI * 2.0;
+    o->groundtrack_direction = rad_to_deg(groundtrack_dir);
+    
 }

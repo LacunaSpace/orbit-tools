@@ -18,6 +18,8 @@ typedef struct {
     double sat_eci[3];
     double velocity;
     double sat_velocity_eci[3];
+    double groundtrack_velocity;
+    double groundtrack_direction;
 } observation;
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when);

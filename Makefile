@@ -1,6 +1,6 @@
 all: bin/tlegen bin/sattrack bin/satpass bin/tleinfo bin/termgen 
 
-util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o build/observer.o build/util.o build/output.o
+util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o build/observer.o build/util.o build/output.o build/debug.o
 
 version:=$(shell git describe --tags --always)
 

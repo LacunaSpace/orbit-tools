@@ -13,6 +13,7 @@
 #include "util.h"
 #include "output.h"
 #include "version.h"
+#include "debug.h"
 
 static char *executable;
 
@@ -22,6 +23,7 @@ static void usage(void) {
     printf("Options are:\n");
     printf("-h,--help                  : show this help and exit.\n");
     printf("-V,--version               : print version and exit.\n");
+    printf("-v,--verbose               : print debug logging.\n");
     printf("-l,--location=<LAT,LON>    : specify the location on the ground, in degrees.\n");
     printf("                             The default is 0,0.\n");
     printf("-s,--start=<TIMESTAMP>     : specify the date and time at which to start the,\n");
@@ -53,12 +55,16 @@ static void usage(void) {
     printf("                             Y: The ECI y coordinate, in km\n");
     printf("                             Z: The ECI z coordinate, in km\n");
     printf("                             V: The satellite's velocity, in km/s\n");
-    printf("                             1: x component of the satellite's velocity the ECI reference frame,\n");
+    printf("                             1: x component of the satellite's velocity in the ECI reference frame,\n");
     printf("                                in km/s\n");
-    printf("                             2: y component of the satellite's velocity the ECI reference frame,\n");
+    printf("                             2: y component of the satellite's velocity in the ECI reference frame,\n");
     printf("                                in km/s\n");
-    printf("                             3: z component of the satellite's velocity the ECI reference frame,\n");
+    printf("                             3: z component of the satellite's velocity in the ECI reference frame,\n");
     printf("                                in km/s\n");
+    printf("                             g: The satellite's ground-track velocity (that is, the velocity\n");
+    printf("                                projected onto the plane tangential to the earth surface at the\n");
+    printf("                                SSP in km/s\n");
+    printf("                             G: The satellite's ground-track direction in degrees\n");
     printf("                             The default is trezoaA when a location is specified,\n");
     printf("                             toaA when no location is specified.\n");
     printf("\n");
@@ -88,6 +94,8 @@ static field fields[] = {
     { "Velocity ECI X", "velocity_eci_x", '1', fld_type_double },
     { "Velocity ECI Y", "velocity_eci_y", '2', fld_type_double },
     { "Velocity ECI Z", "velocity_eci_z", '3', fld_type_double },
+    { "Ground-track velocity", "groundtrack_velocity", 'g', fld_type_double },
+    { "Ground-track direction", "groundtrack_direction", 'G', fld_type_double },
     { NULL }
 };    
 
@@ -98,6 +106,7 @@ int main(int argc, char *argv[]) {
     struct option longopts[] = {
         { "help", no_argument, NULL, 'h' },
         { "version", no_argument, NULL, 'V' },
+        { "verbose", no_argument, NULL, 'v' },
         { "location", required_argument, NULL, 'l' },
         { "start", required_argument, NULL, 's' },
         { "count", required_argument, NULL, 'c' },
@@ -121,7 +130,7 @@ int main(int argc, char *argv[]) {
     enum { fmt_auto, fmt_rows, fmt_cols } fmt = fmt_auto;
     char *selector = NULL;
     int headers = 0;
-    while((c = getopt_long(argc, argv, "hVl:s:c:i:n:f:F:H", longopts, NULL)) != -1) {
+    while((c = getopt_long(argc, argv, "hVvl:s:c:i:n:f:F:H", longopts, NULL)) != -1) {
         switch(c) {
             case 'h':
                 usage();
@@ -129,6 +138,9 @@ int main(int argc, char *argv[]) {
             case 'V':
                 printf("%s\n", VERSION);
                 exit(0);
+            case 'v':
+                debug_enable(1);
+                break;
             case 'l':
                 if(optarg_as_lon_lat(&obs.lon, &obs.lat))
                     usage_error("Invalid location");          
@@ -216,6 +228,8 @@ int main(int argc, char *argv[]) {
         values[12].value.double_value = result.sat_velocity_eci[0];
         values[13].value.double_value = result.sat_velocity_eci[1];
         values[14].value.double_value = result.sat_velocity_eci[2];
+        values[15].value.double_value = result.groundtrack_velocity;
+        values[16].value.double_value = result.groundtrack_direction;
         render(l, fields, values, selector, fmt == fmt_rows);
 
         start.tv_sec += interval;
