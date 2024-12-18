@@ -3,22 +3,14 @@
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include "constants.h"
+#include "util.h"
 
-#define WGS84_A (6378.137) /* In km */
-#define WGS84_E_SQUARED (6.69437999014E-3)
-#define WGS84_OMEGA (7.2921159E-5) /* Earth angular velocity in rad/s */
 
 #define J2000 (946728000.0) /* J2000 is the epoch at 1/1/2000 12:00 noon. This constant is the epoch
                                in UNIX seconds */
 #define EARTH_ANGLE_AT_J2000 (280.46) /* The rotational angle of the earth at J2000, in degrees */
 
-static double deg_to_rad(double a_deg) {
-    return a_deg * (double)M_PI/180.0;
-}
-
-static double rad_to_deg(double a_rad) {
-    return a_rad * 180.0 / (double)M_PI;
-}
 
 static double calc_n(double lat) {
     double sin_lat = sin(lat);
@@ -64,29 +56,6 @@ static void eci_to_ecef(double eci[3], double time, double ecef[3]) {
     ecef[2] = eci[2];
 }
 
-static double vec3_len(double vec[3]) {
-    return sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
-}
-
-static void vec3_scalar_mult(double original[3], double scalar, double result[3]) {
-    for(size_t l=0; l<3; l++)
-        result[l] = original[l] * scalar;
-}
-
-static void vec3_norm(double original[3], double result[3]) {
-    double len = vec3_len(original);
-    vec3_scalar_mult(original, 1.0/len, result);
-}
-
-static double dot_product(double a[3], double b[3]) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-static void cross_product(double a[3], double b[3], double result[3]) {
-    result[0] = a[1]*b[2] - a[2]*b[1];
-    result[1] = a[2]*b[0] - a[0]*b[2];
-    result[2] = a[0]*b[1] - a[1]*b[0];
-}
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when) {
     /* Rotational axis of the earth pointing north, needed in various places */

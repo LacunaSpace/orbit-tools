@@ -1,6 +1,6 @@
 #include <time.h>
 
-/* Assumes optarg contains a lon and lat in degrees, separate by a comma */
+/* Assumes optarg contains a lon and lat in degrees, separated by a comma */
 int optarg_as_lon_lat(double *lon, double *lat);
 
 /* Assumes optarg contains a timestamp as yyyy-mm-ddThh-mm-ssZ */
@@ -16,3 +16,17 @@ int optarg_as_double_excl_excl(double *d, double min, double max);
 
 /* Values >= min and < max are accepted */
 int optarg_as_double_incl_excl(double *d, double min, double max);
+
+/* Values >= min and <= max are accepted */
+int optarg_as_double_incl_incl(double *d, double min, double max);
+
+/* Only values > min and < max are accepted */
+int arg_as_double_excl_excl(const char *arg, double *d, double min, double max);
+
+/* Values >= min and < max are accepted */
+int arg_as_double_incl_excl(const char *arg, double *d, double min, double max);
+
+/* Values >= min and <= max are accepted */
+int arg_as_double_incl_incl(const char *arg, double *d, double min, double max);
+
+int arg_as_double(const char *arg, double *d);

@@ -49,15 +49,41 @@ int optarg_as_int(signed int *i, signed int min, signed int max) {
 }
 
 int optarg_as_double_excl_excl(double *d, double min, double max) {
+    return arg_as_double_excl_excl(optarg, d, min, min);
+}
+
+int optarg_as_double_incl_excl(double *d, double min, double max) {
+    return arg_as_double_incl_excl(optarg, d, min, min);
+}
+
+int optarg_as_double_incl_incl(double *d, double min, double max) {
+    return arg_as_double_incl_incl(optarg, d, min, min);
+}
+
+int arg_as_double_excl_excl(const char *arg, double *d, double min, double max) {
     char *p;
-    *d = strtod(optarg, &p);
+    *d = strtod(arg, &p);
     if(*p || *d <= min || *d >= max) return -1;
     return 0;
 }
 
-int optarg_as_double_incl_excl(double *d, double min, double max) {
+int arg_as_double_incl_excl(const char *arg, double *d, double min, double max) {
     char *p;
-    *d = strtod(optarg, &p);
+    *d = strtod(arg, &p);
     if(*p || *d < min || *d >= max) return -1;
+    return 0;
+}
+
+int arg_as_double_incl_incl(const char *arg, double *d, double min, double max) {
+    char *p;
+    *d = strtod(arg, &p);
+    if(*p || *d < min || *d > max) return -1;
+    return 0;
+}
+
+int arg_as_double(const char *arg, double *d) {
+    char *p;
+    *d = strtod(arg, &p);
+    if(*p) return -1;
     return 0;
 }
