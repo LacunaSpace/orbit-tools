@@ -87,3 +87,17 @@ int arg_as_double(const char *arg, double *d) {
     if(*p) return -1;
     return 0;
 }
+
+int arg_as_vec3(const char *arg, double vec[3]) {
+    char *p;
+    vec[0] = strtod(arg, &p);
+    if(*p != ',') return -1;
+
+    vec[1] = strtod(++p, &p);
+    if(*p != ',') return -1;
+
+    vec[2] = strtod(++p, &p);
+    if(*p) return -1;
+
+    return 0;
+}

@@ -1,4 +1,4 @@
-all: bin/tlegen bin/sattrack bin/satpass bin/tleinfo bin/termgen 
+all: bin/tlegen bin/sattrack bin/satpass bin/tleinfo bin/termgen bin/orbitcalc
 
 util:=build/TLE.o build/SGP4.o build/opt_util.o build/tle_loader.o build/observer.o build/util.o build/output.o build/debug.o
 
@@ -21,6 +21,9 @@ bin/tleinfo: build/tleinfo.o $(util)
 
 bin/termgen: build/termgen.o build/countries.o build/cities.o $(util)
 	$(CC) -o bin/termgen $^ ${LDFLAGS}
+
+bin/orbitcalc: build/orbitcalc.o build/orbitcalc_commands.o $(util)
+	$(CC) -o bin/orbitcalc $^ ${LDFLAGS}
 
 build/cities.o: build/cities.c
 	$(CC) ${CFLAGS} -c $< -o $@

@@ -23,4 +23,8 @@ void vec3_copy(double dst[3], const double src[3]);
 
 void vec3_add_to(double dst[3], const double addend[3]);
 
+void ecef_to_eci(double ecef[3], double time, double eci[3]);
+
+void eci_to_ecef(double eci[3], double time, double ecef[3]);
+
 #endif

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <string.h>
+#include "constants.h"
 
 int string_starts_with(char *s, char *prefix) {
     while(*s && *prefix) {
@@ -58,4 +59,26 @@ void vec3_copy(double dst[3], const double src[3]) {
 void vec3_add_to(double dst[3], const double addend[3]) {
     for(size_t l=0; l<3; l++)
         dst[l] += addend[l];
+}
+
+static double get_earth_rotation(double time) {
+    double delta_t = time - J2000;
+    return WGS84_OMEGA * delta_t + deg_to_rad(EARTH_ANGLE_AT_J2000);
+}
+
+/* time is number of seconds since 1/1/1970 */
+void ecef_to_eci(double ecef[3], double time, double eci[3]) {
+    double a = get_earth_rotation(time);
+
+    eci[0] = ecef[0] * cos(a) - ecef[1] * sin(a);
+    eci[1] = ecef[0] * sin(a) + ecef[1] * cos(a);
+    eci[2] = ecef[2];
+}
+
+void eci_to_ecef(double eci[3], double time, double ecef[3]) {
+    double a = -get_earth_rotation(time);
+
+    ecef[0] = eci[0] * cos(a) - eci[1] * sin(a);
+    ecef[1] = eci[0] * sin(a) + eci[1] * cos(a);
+    ecef[2] = eci[2];
 }

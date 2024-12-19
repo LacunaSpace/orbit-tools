@@ -30,3 +30,5 @@ int arg_as_double_incl_excl(const char *arg, double *d, double min, double max);
 int arg_as_double_incl_incl(const char *arg, double *d, double min, double max);
 
 int arg_as_double(const char *arg, double *d);
+
+int arg_as_vec3(const char *arg, double vec[3]);

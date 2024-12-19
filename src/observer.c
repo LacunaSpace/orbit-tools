@@ -6,12 +6,6 @@
 #include "constants.h"
 #include "util.h"
 
-
-#define J2000 (946728000.0) /* J2000 is the epoch at 1/1/2000 12:00 noon. This constant is the epoch
-                               in UNIX seconds */
-#define EARTH_ANGLE_AT_J2000 (280.46) /* The rotational angle of the earth at J2000, in degrees */
-
-
 static double calc_n(double lat) {
     double sin_lat = sin(lat);
 
@@ -34,27 +28,6 @@ static void lla_to_ecef(double lon_deg, double lat_deg, double alt, double ecef[
     ecef[2] = z;
 }
 
-static double get_earth_rotation(double time) {
-    double delta_t = time - J2000;
-    return WGS84_OMEGA * delta_t + deg_to_rad(EARTH_ANGLE_AT_J2000);
-}
-
-/* time is number of seconds since 1/1/1970 */
-static void ecef_to_eci(double ecef[3], double time, double eci[3]) {
-    double a = get_earth_rotation(time);
-
-    eci[0] = ecef[0] * cos(a) - ecef[1] * sin(a);
-    eci[1] = ecef[0] * sin(a) + ecef[1] * cos(a);
-    eci[2] = ecef[2];
-}
-
-static void eci_to_ecef(double eci[3], double time, double ecef[3]) {
-    double a = -get_earth_rotation(time);
-
-    ecef[0] = eci[0] * cos(a) - eci[1] * sin(a);
-    ecef[1] = eci[0] * sin(a) + eci[1] * cos(a);
-    ecef[2] = eci[2];
-}
 
 
 void observe(observer *obs, observation *o, TLE *tle, time_t when) {
