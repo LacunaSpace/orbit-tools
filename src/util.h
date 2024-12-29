@@ -17,6 +17,10 @@ double dot_product(double a[3], double b[3]);
 
 void cross_product(double a[3], double b[3], double result[3]);
 
+/*
+ * Convert the given latitude and longitude in degrees to a point 
+ * on the unit-sphere
+ */
 void lat_lon_to_vec3(double lat_deg, double lon_deg, double vec3[3]);
 
 void vec3_copy(double dst[3], const double src[3]);

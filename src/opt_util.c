@@ -8,15 +8,19 @@
 #include <string.h>
 #include "opt_util.h"
 
-int optarg_as_lon_lat(double *lon, double *lat) {
+int arg_as_lon_lat(const char *arg, double *lon, double *lat) {
     char *p;
-    *lat = strtod(optarg, &p);
+    *lat = strtod(arg, &p);
     if(*p != ',' || *lat < -90.0 || *lat > 90.0) return -1;
 
     *lon = strtod(++p, &p);
     if(*p || *lon < -180.0 || *lon > 180.0) return -1;
 
     return 0;
+}
+
+int optarg_as_lon_lat(double *lon, double *lat) {
+    return arg_as_lon_lat(optarg, lon, lat);
 }
 
 int optarg_as_datetime(time_t *t) {

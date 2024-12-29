@@ -2,6 +2,7 @@
 
 /* Assumes optarg contains a lon and lat in degrees, separated by a comma */
 int optarg_as_lon_lat(double *lon, double *lat);
+int arg_as_lon_lat(const char *arg, double *lon, double *lat);
 
 /* Assumes optarg contains a timestamp as yyyy-mm-ddThh-mm-ssZ */
 int optarg_as_datetime(time_t *t); 
