@@ -27,7 +27,8 @@ orbitcalc_command *commands[] = {
     &help_command,
     &eci_to_ecef_command,
     &ecef_to_eci_command,
-    &azimuth_command
+    &azimuth_command,
+    &distance_command
 };
 
 static int help_command_handler(int argc, char *argv[], void *unused) {

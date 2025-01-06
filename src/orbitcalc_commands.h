@@ -6,5 +6,6 @@
 extern orbitcalc_command eci_to_ecef_command;
 extern orbitcalc_command ecef_to_eci_command;
 extern orbitcalc_command azimuth_command;
+extern orbitcalc_command distance_command;
 
 #endif

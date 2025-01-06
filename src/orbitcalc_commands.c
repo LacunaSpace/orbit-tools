@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "opt_util.h"
 #include "util.h"
+#include "constants.h"
 #include <stdio.h>
 #include <sysexits.h>
 #include <getopt.h>
@@ -98,6 +99,7 @@ static double safe_acos(double a) {
     if(a < -1.0) a = -1.0;
     return acos(a);
 }
+
 static int azimuth_command_handler(int argc, char *argv[], void *unused) {
     DEBUG("azimuth_command_handler");
     if(argc != 3) {
@@ -185,5 +187,47 @@ orbitcalc_command azimuth_command = {
     "with the latitude >= -90 and <= 90, and the longitude >= -180 and <= 180.\n"
     "The azimuth is the compass direction in which DST is seen from SRC.\n",
     azimuth_command_handler,
+    NULL
+};
+
+static int distance_command_handler(int argc, char *argv[], void *unused) {
+    DEBUG("azimuth_command_handler");
+    if(argc != 3) {
+        fprintf(stderr, "Error: need two arguments\n");
+        return EX_USAGE;
+    }
+
+    double p1_lat, p1_lon,
+           p2_lat, p2_lon;
+
+    if(arg_as_lon_lat(argv[1], &p1_lon, &p1_lat)) {
+        fprintf(stderr, "Error: invalid P1\n");
+        return EX_USAGE;
+    }
+    if(arg_as_lon_lat(argv[2], &p2_lon, &p2_lat)) {
+        fprintf(stderr, "Error: invalid P2\n");
+        return EX_USAGE;
+    }
+    double p1[3], p2[3];
+    lat_lon_to_vec3(p1_lat, p1_lon, p1);
+    lat_lon_to_vec3(p2_lat, p2_lon, p2);
+    double a = safe_acos(dot_product(p1, p2));
+    double distance = a * WGS84_A;
+    printf("%g\n", distance);
+    return EX_OK;
+}
+    
+
+orbitcalc_command distance_command = {
+    "distance",
+    "Calculates the great-circle distance between two points",
+    "Usage: distance <P1> <P2>\n"
+    "\n"
+    "Both <P1> and <P2> are locations on earth as latitude and longitude, separated\n"
+    "by a comma (and no whitespace). Latitude and longitude are specified as decimals,\n"
+    "with the latitude >= -90 and <= 90, and the longitude >= -180 and <= 180.\n"
+    "The distance is shown in kilometres, and is calculated assuming the earth as a perfect\n"
+    "sphere",
+    distance_command_handler,
     NULL
 };
