@@ -1,0 +1,187 @@
+.TH sattrack 1
+.SH NAME
+sattrack \- calculates the position of satellite in orbit at a given time, optionally relative to an observer on the ground
+.SH SYNOPSIS
+.B sattrack
+[OPTION...]
+[FILE]
+.SH DESCRIPTION
+The
+.B sattrack
+utility reads a TLE file, then calculates the position of the satellite at a given time, or
+at a series of times. Optionally, the location of an observer on the ground can be given, in
+which case 
+.B sattrack
+will also calculate various aspects of the satellite's visibility to that observer.
+
+.SH OPTIONS
+The options are:
+
+.TP
+.BR \-h,\-\-help
+Show short help and exit
+
+.TP
+.BR \-V,\-\-version
+Show the version and exit
+
+.TP
+.BR \-v,\-\-verbose
+Show debug output. Not needed during normal usage
+
+.TP
+.BR \-l,\-\-location=LOCATION
+Set the location of an observer. The location is set as a string consisting of latitude and longitude,
+separated with a comma and without whitespace. Both latitude and longitude are signed decimals, with a 
+range of -90.0 to 90.0 for latitude, and -180.0 to 180.0 for longitude. As an example, the option for
+location Amsterdam would be 
+.B \-\-location=52.3667,4.8833
+and for Buenos Aires
+.B \-\-location=\-34.5997,\-58.3819
+\&. Setting a location is optional, but certain output-fields are not available without a location
+
+.TP
+.BR \-s,\-\-start=TIMESTAMP
+Set the time for which to calculate the satellite's position. 
+.B TIMESTAMP
+is formatted as yyyy-mm-ddThh:mm:ssZ and is in UTC. The default is to use the current date and time. Without a
+.B \-\-count
+option, only the position at 
+.B TIMESTAMP
+is calculated, but with a 
+.B \-\-count
+option, the position is calculated for a series of timestamps starting at
+.B TIMESTAMP
+
+.TP
+.BR \-c,\-\-count=COUNT
+Set the number of consecutive timestamps for which to calculate the satellite's position. Defaults to 
+.B 1
+.\&.
+
+.TP
+.BR \-i,\-\-interval=INTERVAL
+Set the interval in seconds between consecutive calculations of the satellite's position. For example, with
+options
+.B \-\-count=3
+and
+.B \-\-interval=60
+the satellite's position will be calculated at the timestamp set with
+.B \-\-start
+and 1 and 2 minutes after that.
+
+.TP
+.BR \-n,\-\-satellite\-name=NAME
+In case the given TLE file contains multiple satellites, specify the name of the satellite to use. Default
+behaviour is to use the first satellite from the TLE file.
+
+.TP
+.BR \-f,\-\-format=rows|cols
+Set the output-format to either
+.B rows
+(which is easier readable for a human user) or 
+.B cols
+(which is easier to process by another program). Defaults to
+.B rows
+when 
+.B \-\-count
+is 
+.B 1
+, otherwise 
+.B cols
+\&.
+
+.TP
+.BR \-H,\-\-headers
+When the output format is
+.B cols
+, print a row with column-headers first.
+
+.TP
+.BR \-F,\-\-fields=FIELDS
+Sets the fields to print for each calculated satellite-position. 
+.B FIELDS
+is a character-string with each characters specifying a field. See the
+.B OUTPUT FIELDS
+section for a listing of all fields. Defaults to 
+.B trezoaA
+when a 
+.B \-\-location
+option is set, or to
+.B toaA
+when it isn't.
+
+.SH ARGUMENTS
+The 
+.B FILE
+argument specifies the TLE file. The special value
+.B \-
+means to use 
+.B stdin
+\&. Without a
+.B FILE
+argument, 
+.B sattrack
+uses the contents of the 
+.B ${ORBIT_TOOLS_TLE} 
+environment variable.
+
+.SH OUTPUT FIELDS
+The \fBFIELDS\fR string to the \fB\-\-fields\fR option may contain the following characters:
+.TP
+.BR t
+The date and time, formatted as \fByyyy-mm-ddThh:mm:ssZ\fR
+
+.TP
+.BR T
+The date and time, in seconds since the UNIX epoch
+
+.TP
+.BR r
+The range (i.e. the distance between the satellite and the observer) in km. Only available
+when \fB\-\-location\fR is set
+
+.TP
+.BR l
+The elevation (i.e. the angle from the horizon at which the satellite is seen by the observer) in
+degrees. Only available when \fB\-\-location\fR is set
+
+.TP
+.BR z
+The azimuth (i.e. the compass point at which the satellite is seen by the observer) in degrees. 
+Only available when \fB\-\-location\fR is set
+
+.TP
+.BR o
+The longitude of the sub-satellite point (i.e. the point at the earth surface directly underneath the
+satellite), in degrees
+
+.TP
+.BR a
+The latitude of the sub-satellite point, in degrees
+
+.TP
+.BR A
+The altitude of the satellite, in km
+
+.TP
+.BR XYZ
+The X, Y and Z coordinate of the satellite's position in the ECI coordinate system, in km
+
+.TP
+.BR 123
+The X, Y and Z component of the satellite's velocity in the ECI coordinate system, in km/s
+
+.TP
+.BR g
+The satellite's ground-track velocity (i.e. the velocity at which the SSP moves over the
+earth surface), in km/s
+
+.TP
+.BR G
+The satellite's ground-track direction (i.e. the direction in which the SSP moves over the
+earth surface) as a compas point in degrees
+
+
+.SH EXIT CODES
+The \fBls300commander\fR utility will exit with \fI0\fR on success, or an exit code \fI> 0\fR if an error occurs.

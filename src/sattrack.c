@@ -27,7 +27,7 @@ static void usage(void) {
     printf("-l,--location=<LAT,LON>    : specify the location on the ground, in degrees.\n");
     printf("                             The default is 0,0.\n");
     printf("-s,--start=<TIMESTAMP>     : specify the date and time at which to start the,\n");
-    printf("                             calculation, formatted as yyyy-mm-ddThh-mm-ssZ.\n");
+    printf("                             calculation, formatted as yyyy-mm-ddThh:mm:ssZ.\n");
     printf("                             The default is the current date and time.\n");
     printf("-c,--count=<COUNT>         : specify the number of calculations to perform.\n");
     printf("                             The default is 1.\n");
